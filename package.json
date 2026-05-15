@@ -1,0 +1,36 @@
+{
+  "name": "yongle-dadian",
+  "version": "1.0.0",
+  "description": "永乐大典 — AI 开发经验知识库引擎。自动复盘、过程追踪、毫秒级检索。独立于 GSD 运行。",
+  "bin": {
+    "yongle-dadian": "bin/install.js"
+  },
+  "files": [
+    "bin",
+    "commands",
+    "workflows",
+    "scripts",
+    "skills",
+    "YONGLE.md"
+  ],
+  "keywords": [
+    "yongle",
+    "knowledge-base",
+    "ai-agent",
+    "postmortem",
+    "developer-experience",
+    "antigravity",
+    "gemini",
+    "claude"
+  ],
+  "author": "Lemony",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.cjs",
+    "install:local": "node bin/install.js --local",
+    "install:global": "node bin/install.js --global"
+  }
+}
