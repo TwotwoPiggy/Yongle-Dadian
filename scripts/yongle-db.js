@@ -14,10 +14,10 @@ const LOCAL_DB_PATH = path.join(process.cwd(), '.planning', 'yongle', 'yongle.db
 const DB_PATH = process.env.YONGLE_DB_PATH || (SCOPE === 'local' ? LOCAL_DB_PATH : GLOBAL_DB_PATH);
 
 function runSql(sql) {
-    const singleLineSql = sql.replace(/\r?\n/g, ' ').trim();
     try {
         const { spawnSync } = require('child_process');
-        const result = spawnSync('sqlite3', [DB_PATH, singleLineSql], { 
+        const result = spawnSync('sqlite3', [DB_PATH], { 
+            input: sql,
             encoding: 'utf8',
             windowsHide: true
         });
@@ -98,6 +98,11 @@ switch (COMMAND) {
     case 'upsert': upsert(); break;
     case 'query': query(); break;
     default:
-        console.error(`Unknown command: ${COMMAND}`);
-        process.exit(1);
+        // When required as a module, COMMAND might be undefined, so we don't exit if we have exports
+        if (require.main === module) {
+            console.error(`Unknown command: ${COMMAND}`);
+            process.exit(1);
+        }
 }
+
+module.exports = { runSql, init, upsert, query };

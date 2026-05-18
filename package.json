@@ -31,6 +31,10 @@
   "scripts": {
     "test": "node scripts/run-tests.cjs",
     "install:local": "node bin/install.js --local",
-    "install:global": "node bin/install.js --global"
+    "install:global": "node bin/install.js --global",
+    "embed:all": "node scripts/yongle-embed-all.js"
+  },
+  "dependencies": {
+    "vectordb": "^0.21.2"
   }
 }

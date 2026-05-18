@@ -83,6 +83,9 @@ AskUserQuestion(
    # 鍑嗗鏁版嵁 JSON
    DATA_JSON="{\"id\": \"$ID\", \"date\": \"$DATE\", \"resolution_type\": \"$TYPE\", \"cause_summary\": \"$SUMMARY\", \"tags\": [${TAGS_ARRAY}], \"filepath\": \"$FINAL_PATH\"}"
    node yongle/scripts/yongle-db.js upsert "$DB_SCOPE" "$DATA_JSON"
+
+   # 6. 触发后台 Embedding 任务 (Fire-and-forget)
+   node yongle-dadian/scripts/yongle-embed.js "$DB_SCOPE" "$FINAL_PATH" > /dev/null 2>&1 &
    ```
 
 4. **娓呯悊鏃ф枃浠?*锛?   鍒犻櫎鍘熻崏绋挎枃浠躲€?

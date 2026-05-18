@@ -26,16 +26,9 @@ cause_summary: "<涓€鍙ヨ瘽绮剧偧鏍瑰洜>"               # 30瀛椾互
 - `--model <name>` 鈫?瑕嗙洊鍒嗘瀽鏃朵娇鐢ㄧ殑妯″瀷鍚嶇О锛堜粎浣滆褰曪紝瀹為檯鐢卞涓籄gent璋冨害锛?
 鑻ユ湭鎸囧畾 scope锛岄粯璁や娇鐢?`--global`銆?
 纭畾褰掓。璺緞锛堝瓨鍌ㄤ负 `$ARCHIVE_DIR`锛夛細
-```bash
-if [ "$SCOPE" = "local" ]; then
-  ARCHIVE_DIR=".planning/knowledge"
-else
-  # Windows PowerShell 鍏煎澶勭悊: $HOME 涓虹┖鏃跺洖閫€鍒?$USERPROFILE
-  HOME_DIR="${HOME:-$USERPROFILE}"
-  ARCHIVE_DIR="${HOME_DIR}/.yongle_knowledge"
-fi
-mkdir -p "$ARCHIVE_DIR"
-```
+# Windows PowerShell / Bash 兼容处理
+node -e "const fs = require('fs'); const dir = process.argv[1]; if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });" "$ARCHIVE_DIR"
+
 
 ---
 
