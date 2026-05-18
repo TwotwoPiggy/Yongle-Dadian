@@ -66,7 +66,7 @@
 graph TD
     UserInput[用户或AI命令行输入] -->|Trigger| CLI[Yongle CLI Wrapper]
     
-    subgraph 自动复盘与存储 (Ingestion)
+    subgraph "自动复盘与存储 (Ingestion)"
         CLI -->|/yongle-postmortem| Draft[生成 Markdown 草稿]
         Draft -->|/yongle-confirm| Clean[元数据清洗 & 写入物理 Markdown]
         Clean -->|1. 数据库写入| SQLite[(SQLite Metadata DB)]
@@ -75,7 +75,7 @@ graph TD
         Models -->|4. 高维特征返回| LanceDB[(LanceDB Embed Vector Store)]
     end
 
-    subgraph 混合召回与融合 (Retrieval)
+    subgraph "混合召回与融合 (Retrieval)"
         CLI -->|/yongle-search| HybridSearcher[yongle-hybrid-search.js]
         HybridSearcher -->|1. 瞬时查询| SQLite
         SQLite -->|2. TTY流式渲染打底| Term[终端展示]
