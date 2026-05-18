@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { getAgentCompletion } = require('./yongle-agent-api.js');
 
 // 配置 (可从 .yongle.json 读取，此处为默认值)
 const CONFIG = {
@@ -39,21 +40,82 @@ function getSystemIdleTime() {
   return getFileSilenceTime(); 
 }
 
-function runDream(type) {
+async function runDream(type) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] 🏮 正在进入${type === 'quick' ? '快速梦' : '长梦'}...`);
   
-  // 写入缓冲区 (追加模式)
+  // 1. 读取潜在的上下文数据
+  let contextText = '';
+  
+  // A. 读取 WATCHING.md (优先)
+  const watchingPath = '.planning/yongle/WATCHING.md';
+  if (fs.existsSync(watchingPath)) {
+    try {
+      contextText += `=== Active Watch Timeline ===\n${fs.readFileSync(watchingPath, 'utf8')}\n\n`;
+    } catch (e) {}
+  }
+  
+  // B. 读取 STATE.md
+  const statePath = '.planning/STATE.md';
+  if (fs.existsSync(statePath)) {
+    try {
+      contextText += `=== Project State ===\n${fs.readFileSync(statePath, 'utf8')}\n\n`;
+    } catch (e) {}
+  }
+  
+  // C. 如果没有任何上下文，写入默认
+  if (!contextText) {
+    contextText = '未检测到活跃的过程探针或项目状态。系统处于平稳静默期。';
+  }
+
+  // 2. 调用 Agent 生成总结 / 沉淀意见
+  let summary = '';
+  try {
+    const prompt = `你是一个在后台守护的"梦境思考者"（Dreamer）。以下是项目当前的最近开发过程记录和项目状态：\n\n${contextText}\n\n根据以上内容，请生成一个关于该静默期的“${type === 'quick' ? '开发片段沉淀与洞察' : '长周期静默开发反思'}”。要求：\n1. 提炼核心工作进度；\n2. 提出1-2条潜在的技术优化、风险防范或可提炼的经验条目设想。\n3. 字数控制在200-300字以内，采用极其专业、简洁的中文开发者口吻。`;
+    
+    summary = await getAgentCompletion(prompt, '你是一个专门在静默期整理开发记忆的后台梦境守护者（Yongle Dreamer）。');
+  } catch (err) {
+    console.error(`[${timestamp}] ⚠ 梦境调用 Agent 失败: ${err.message}`);
+    summary = `Failed to invoke Agent: ${err.message}`;
+  }
+
+  // 3. 写入缓冲区 (追加模式)
   const logEntry = {
     timestamp,
     type,
-    summary: `Detected ${type} idle threshold met.`,
-    status: 'pending_summarization'
+    summary: summary.trim(),
+    status: 'summarized'
   };
   
   fs.appendFileSync(CONFIG.BUFFER_FILE, JSON.stringify(logEntry) + '\n');
   
-  // TODO: 调用宿主 Agent 执行具体总结指令 (通常在下一次用户唤醒时处理，或此处尝试 spawn 任务)
+  // 4. 将梦境沉淀写入一个正式的梦境记录 Markdown 中以供用户审阅！
+  try {
+    const dreamsDir = '.planning/yongle/dreams';
+    if (!fs.existsSync(dreamsDir)) fs.mkdirSync(dreamsDir, { recursive: true });
+    
+    const dreamFile = path.join(dreamsDir, `dream-${timestamp.replace(/[:.]/g, '-')}.md`);
+    const dreamContent = `---
+type: ${type}
+date: ${timestamp.split('T')[0]}
+time: ${timestamp}
+---
+
+# 💤 永乐梦境沉淀 (${type === 'quick' ? '快速梦' : '长梦'})
+
+在静默期，永乐大典的大模型代理对活跃探针及项目状态进行了深度回溯整理，梦境沉淀如下：
+
+${summary.trim()}
+
+---
+*本记录由永乐大典后台梦境守护者 (Yongle Dreamer) 自动生成。*
+`;
+    fs.writeFileSync(dreamFile, dreamContent, 'utf8');
+    console.log(`[${timestamp}] 💤 梦境沉淀已落盘: ${dreamFile}`);
+  } catch (e) {
+    console.error(`[${timestamp}] ⚠ 写入梦境文件失败: ${e.message}`);
+  }
+  
   console.log(`[${timestamp}] ✅ ${type === 'quick' ? '梦境片段已缓存' : '梦境合并已排期'}`);
 }
 

@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { runSql } = require('./yongle-db.js');
 const { queryLanceDB } = require('./yongle-lancedb.js');
-const { getEmbedding, configPath } = require('./yongle-embed.js');
+const { getEmbedding } = require('./yongle-embed.js');
+const { loadMergedConfig } = require('./yongle-config.js');
 
 function formatResult(item, isSemantic = false) {
   let tagsStr = '';
@@ -80,12 +81,8 @@ async function main() {
 
   try {
     // 2. Fetch Embedding
-    const defaultEmbedding = { provider: 'ollama', model: 'nomic-embed-text' };
-    let config = {};
-    if (fs.existsSync(configPath)) {
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    }
-    const embedConfig = config.embedding || defaultEmbedding;
+    const config = loadMergedConfig();
+    const embedConfig = config.embedding || { provider: 'ollama', model: 'nomic-embed-text' };
 
     const vector = await getEmbedding(keyword, embedConfig.provider, embedConfig.model, embedConfig.apiKey, embedConfig.baseUrl);
 

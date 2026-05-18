@@ -1,0 +1,27 @@
+{
+  "yongle": {
+    "sync": {
+      "mode": "manual",
+      "global_repo_url": "git@github.com:yourname/my-ai-knowledge.git"
+    },
+    "postmortem": {
+      "context_limit": 30,
+      "auto_confirm": false
+    },
+    "search": {
+      "default_limit": 5
+    }
+  },
+  "embedding": {
+    "provider": "gemini",
+    "model": "gemini-embedding-001",
+    "apiKey": "YOUR_GEMINI_API_KEY",
+    "baseUrl": "https://generativelanguage.googleapis.com"
+  },
+  "agent": {
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "apiKey": "YOUR_GEMINI_API_KEY",
+    "description": "对话 Agent 配置。若省略整个 agent 节点，系统将智能继承 embedding 中的密钥与提供商，Gemini 会自动匹配使用 gemini-1.5-flash 快速对话模型。"
+  }
+}

@@ -3,7 +3,29 @@ node_modules/
 dist/
 *.log
 .env
+.env.local
+.env.*.local
 coverage/
 .nyc_output/
 *.sqlite
 *.db
+*.db-shm
+*.db-wal
+
+# Planning directories (may contain local configs)
+.planning/
+
+# Local knowledge base (usually in home dir, but just in case)
+.yongle_knowledge/
+
+# OS files
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.cache

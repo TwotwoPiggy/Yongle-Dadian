@@ -3,6 +3,7 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
+const { loadMergedConfig } = require('./yongle-config');
 
 const homedir = os.homedir();
 const configPath = path.join(homedir, '.yongle_knowledge', 'config.json');
@@ -107,16 +108,7 @@ async function main() {
     process.exit(1);
   }
 
-  let config = {};
-  if (fs.existsSync(configPath)) {
-    try {
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch (e) {
-      logError(`Failed to parse config: ${e.message}`);
-      process.exit(1);
-    }
-  }
-
+  const config = loadMergedConfig();
   const embedConfig = config.embedding || { provider: 'ollama', model: 'nomic-embed-text' };
 
   if (!fs.existsSync(filepath)) {

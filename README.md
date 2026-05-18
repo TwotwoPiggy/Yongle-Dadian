@@ -146,7 +146,12 @@ npx yongle-dadian --global --antigravity
    ```
 
 #### ⚙️ 配置文件说明 (`~/.yongle_knowledge/config.json`)
-永乐大典在初始化时会在用户家目录下生成 `.yongle_knowledge` 目录。你可以通过修改其中的 `config.json` 来配置首选的 Embedding 提供商：
+永乐大典在初始化时会在用户家目录下生成 `.yongle_knowledge` 目录。你可以通过修改其中的 `config.json` 来配置首选的 Embedding（向量检索）与 Agent（对话总结）提供商：
+
+> [!TIP]
+> **快捷起步**：我们在项目根目录下提供了一个 [config.json.example](file:///d:/Computers/AIDevelop/Tools/Skills/yongle-dadian/config.json.example) 示例文件，您可以直接将其复制到全局路径 `~/.yongle_knowledge/config.json` 并填写您的 API Key。
+>
+> **智能继承机制**：若省略 `agent` 节点配置，系统在需要使用大语言模型交互（例如后台自动做梦总结、命令行独立复盘）时，会**自动继承** `embedding` 的密钥和提供商，并智能分配最佳轻量对话模型（如 Gemini 会默认匹配 `gemini-1.5-flash`）。
 
 ##### 配置 Gemini (推荐)
 ```json
@@ -154,6 +159,11 @@ npx yongle-dadian --global --antigravity
     "embedding": {
         "provider": "gemini",
         "model": "gemini-embedding-001",
+        "apiKey": "YOUR_GEMINI_API_KEY"
+    },
+    "agent": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
         "apiKey": "YOUR_GEMINI_API_KEY"
     }
 }
@@ -166,6 +176,11 @@ npx yongle-dadian --global --antigravity
         "provider": "deepseek",
         "model": "deepseek-embedding",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
+    },
+    "agent": {
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "apiKey": "YOUR_DEEPSEEK_API_KEY"
     }
 }
 ```
@@ -176,6 +191,11 @@ npx yongle-dadian --global --antigravity
     "embedding": {
         "provider": "ollama",
         "model": "nomic-embed-text",
+        "baseUrl": "http://localhost:11434"
+    },
+    "agent": {
+        "provider": "ollama",
+        "model": "llama3",
         "baseUrl": "http://localhost:11434"
     }
 }
@@ -339,7 +359,12 @@ npx yongle-dadian --global --antigravity
    ```
 
 #### ⚙️ Configuration File (`~/.yongle_knowledge/config.json`)
-Customize your preferred embedding engine in the configuration file generated in your home directory:
+Customize your preferred embedding (semantic retrieval) and agent (completions/summaries) engines in the configuration file generated in your home directory:
+
+> [!TIP]
+> **Quick Start**: We provide a [config.json.example](file:///d:/Computers/AIDevelop/Tools/Skills/yongle-dadian/config.json.example) template file in the project root directory. You can copy it directly to `~/.yongle_knowledge/config.json` and fill in your API keys.
+>
+> **Smart Inheritance**: If you omit the `agent` config block, system operations requiring LLM chat completions (such as background dreaming summaries, or standalone terminal postmortems) will **automatically inherit** the API keys and provider configured under `embedding`, defaulting to their respective lightweight chat models (e.g. Gemini will automatically map to `gemini-1.5-flash`).
 
 ##### Config Gemini (Recommended)
 ```json
@@ -347,6 +372,11 @@ Customize your preferred embedding engine in the configuration file generated in
     "embedding": {
         "provider": "gemini",
         "model": "gemini-embedding-001",
+        "apiKey": "YOUR_GEMINI_API_KEY"
+    },
+    "agent": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
         "apiKey": "YOUR_GEMINI_API_KEY"
     }
 }
@@ -359,6 +389,11 @@ Customize your preferred embedding engine in the configuration file generated in
         "provider": "deepseek",
         "model": "deepseek-embedding",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
+    },
+    "agent": {
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "apiKey": "YOUR_DEEPSEEK_API_KEY"
     }
 }
 ```
@@ -369,6 +404,11 @@ Customize your preferred embedding engine in the configuration file generated in
     "embedding": {
         "provider": "ollama",
         "model": "nomic-embed-text",
+        "baseUrl": "http://localhost:11434"
+    },
+    "agent": {
+        "provider": "ollama",
+        "model": "llama3",
         "baseUrl": "http://localhost:11434"
     }
 }
