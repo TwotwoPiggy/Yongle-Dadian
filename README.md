@@ -113,6 +113,38 @@ npx yongle-dadian --global --antigravity
    node bin/install.js --global --antigravity
    ```
 
+#### 🔄 如何更新
+
+更新永乐大典非常简单，它与你的安装途径一一对应：
+
+- **途径 A（npm 全局）**：直接再次运行 `npx` 即可拉取最新版：
+  ```powershell
+  npx yongle-dadian --global --antigravity
+  ```
+- **途径 B（源码克隆）**：拉取最新代码并重新运行安装器：
+  ```powershell
+  git pull
+  npm install
+  node bin/install.js --global --antigravity
+  ```
+
+#### 🗑️ 如何卸载
+
+如果你需要完全移除永乐大典及其技能插件：
+
+1. **卸载技能插件**：运行安装器的 `--uninstall` 标志，从宿主 Agent 中移除技能绑定：
+   ```powershell
+   node bin/install.js --uninstall --global --antigravity
+   ```
+2. **（可选）清理本地知识库**：若你想彻底销毁已沉淀的本地数据库和 Markdown 条目（数据无法找回，请谨慎操作）：
+   ```powershell
+   # Windows PowerShell
+   Remove-Item -Path "$HOME\.yongle_knowledge" -Recurse -Force
+   
+   # macOS / Linux Bash
+   rm -rf ~/.yongle_knowledge
+   ```
+
 #### ⚙️ 配置文件说明 (`~/.yongle_knowledge/config.json`)
 永乐大典在初始化时会在用户家目录下生成 `.yongle_knowledge` 目录。你可以通过修改其中的 `config.json` 来配置首选的 Embedding 提供商：
 
@@ -341,6 +373,38 @@ Customize your preferred embedding engine in the configuration file generated in
     }
 }
 ```
+
+#### 🔄 How to Update
+
+Updating Yongle Dadian is as simple as re-running the installation steps:
+
+- **Approach A (npm Global)**: Just run the `npx` command again to fetch and link the latest version:
+  ```powershell
+  npx yongle-dadian --global --antigravity
+  ```
+- **Approach B (Source Clone)**: Pull latest git changes and re-run installer:
+  ```powershell
+  git pull
+  npm install
+  node bin/install.js --global --antigravity
+  ```
+
+#### 🗑️ How to Uninstall
+
+To cleanly remove all yongle integration and files:
+
+1. **Uninstall Agent Skills**: Use the `--uninstall` flag in the installer to unbind skills from the host Agent:
+   ```powershell
+   node bin/install.js --uninstall --global --antigravity
+   ```
+2. **(Optional) Wipe Knowledge Base**: If you want to permanently erase the local databases and Markdown notes (Caution: this is irreversible!):
+   ```powershell
+   # Windows PowerShell
+   Remove-Item -Path "$HOME\.yongle_knowledge" -Recurse -Force
+   
+   # macOS / Linux Bash
+   rm -rf ~/.yongle_knowledge
+   ```
 
 ---
 
