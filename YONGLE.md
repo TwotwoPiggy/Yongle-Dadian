@@ -127,6 +127,7 @@
 #### `embedding` (向量提取配置)
 | 字段 | 默认值 | 可选值 | 说明 |
 | :--- | :--- | :--- | :--- |
+| `enabled` | `true` | `true`, `false` | 向量功能总开关。设为 `false` 后，系统在搜索时将**自动优雅降级**为纯本地 SQLite 倒排索引检索（离线零网络开销匹配），不再提取特征向量；在归档时也将跳过生成向量步骤。 |
 | `provider` | `"ollama"` | `"gemini"`, `"deepseek"`, `"openai"`, `"ollama"`, `"openai-compatible"` | 向量检索提取器提供商。 |
 | `model` | `"nomic-embed-text"` | 各种向量模型 | 提取所选的模型。如 `gemini-embedding-001` 等。 |
 | `apiKey` | `null` | 字符串 | 对应的 API 访问令牌。 |
@@ -135,6 +136,7 @@
 #### `agent` (核心对话模型配置)
 | 字段 | 默认值 | 可选值 | 说明 |
 | :--- | :--- | :--- | :--- |
+| `enabled` | `true` | `true`, `false` | 大模型对话功能总开关。设为 `false` 后，系统在复盘（`/yongle-postmortem`）或需要 LLM 推理的操作时将**直接阻断并抛出异常**，强制停用外部调用。 |
 | `provider` | `null` | `"gemini"`, `"deepseek"`, `"openai"`, `"ollama"`, `"openai-compatible"` | 对话模型大语言模型提供商。若不指定，将**智能继承**自 `embedding` 处的提供商与密钥，降低配置复杂度。 |
 | `model` | `null` | 各种对话模型 | 对应的对话模型名称（如 `gemini-1.5-flash`、`deepseek-chat`）。若不指定，将根据 provider 分配最佳默认轻量模型。 |
 | `apiKey` | `null` | 字符串 | 大模型访问令牌。默认自动继承 `embedding` 处的 API 密钥。 |
@@ -171,11 +173,13 @@
     "proxy": "http://127.0.0.1:7890"
   },
   "embedding": {
+    "enabled": true,
     "provider": "gemini",
     "model": "gemini-embedding-001",
     "apiKey": "AIzaSy..."
   },
   "agent": {
+    "enabled": true,
     "provider": "gemini",
     "model": "gemini-1.5-flash",
     "apiKey": "AIzaSy..."

@@ -16,6 +16,11 @@ function logError(message) {
 }
 
 async function getEmbedding(text, provider, model, apiKey, baseUrl) {
+  const config = loadMergedConfig();
+  if (config.embedding && config.embedding.enabled === false) {
+    throw new Error('Embedding API is disabled in config');
+  }
+
   if (provider === 'ollama') {
     const url = baseUrl || 'http://localhost:11434';
     const res = await yongleRequest.yongleFetch(`${url}/api/embeddings`, {

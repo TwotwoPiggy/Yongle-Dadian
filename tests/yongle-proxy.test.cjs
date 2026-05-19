@@ -159,4 +159,48 @@ describe('yongle-request proxy configuration', () => {
       }
     });
   });
+
+  describe('API enabled flags', () => {
+    let originalConfigLoader;
+    let mockConfig = {};
+
+    before(() => {
+      const configModule = require('../scripts/yongle-config.js');
+      originalConfigLoader = configModule.loadMergedConfig;
+      configModule.loadMergedConfig = () => mockConfig;
+    });
+
+    after(() => {
+      const configModule = require('../scripts/yongle-config.js');
+      configModule.loadMergedConfig = originalConfigLoader;
+    });
+
+    it('should throw error when embedding.enabled is false', async () => {
+      mockConfig = {
+        embedding: {
+          enabled: false,
+          provider: 'openai'
+        }
+      };
+      const { getEmbedding } = require('../scripts/yongle-embed.js');
+      await assert.rejects(
+        () => getEmbedding('test', 'openai', 'model', 'key'),
+        /Embedding API is disabled in config/
+      );
+    });
+
+    it('should throw error when agent.enabled is false', async () => {
+      mockConfig = {
+        agent: {
+          enabled: false,
+          provider: 'openai'
+        }
+      };
+      const { getAgentCompletion } = require('../scripts/yongle-agent-api.js');
+      await assert.rejects(
+        () => getAgentCompletion('test'),
+        /Agent API is disabled in config/
+      );
+    });
+  });
 });
