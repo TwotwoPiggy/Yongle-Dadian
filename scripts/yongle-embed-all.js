@@ -38,6 +38,13 @@ async function findMarkdownFiles(dir) {
 }
 
 async function main() {
+  const { loadMergedConfig } = require('./yongle-config');
+  const config = loadMergedConfig();
+  if (config.embedding && config.embedding.enabled === false) {
+    console.log("💡 Info: Embedding API is disabled in config. Skipping batch processing.");
+    return;
+  }
+
   const scope = process.argv[2] || 'global';
   let targetDir = '';
 

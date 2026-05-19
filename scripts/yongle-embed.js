@@ -117,6 +117,11 @@ async function main() {
   const config = loadMergedConfig();
   const embedConfig = config.embedding || { provider: 'ollama', model: 'nomic-embed-text' };
 
+  if (config.embedding && config.embedding.enabled === false) {
+    console.log(`💡 Info: Embedding API is disabled in config. Skipping vector generation for ${filepath}.`);
+    return;
+  }
+
   if (!fs.existsSync(filepath)) {
     logError(`File not found: ${filepath}`);
     process.exit(1);
