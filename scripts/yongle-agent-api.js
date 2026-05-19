@@ -12,9 +12,9 @@ const yongleRequest = require('./yongle-request');
 async function getAgentCompletion(prompt, systemInstruction = '', options = {}) {
   const config = loadMergedConfig();
   
-  // 开关检查：如果 agent 显式被禁用，则抛出错误拒绝调用
+  // 开关检查：如果 agent 显式被禁用，则返回友好说明字符串而不在 stderr 抛错
   if (config.agent && config.agent.enabled === false) {
-    throw new Error('Agent API is disabled in config');
+    return '💡 Agent API is disabled in config.';
   }
   
   // 获取已合并的配置
