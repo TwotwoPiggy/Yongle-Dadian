@@ -268,7 +268,7 @@ npx yongle-dadian --global --antigravity
 - **永乐大典**：是一个专注于“长期记忆与防踩坑”的检索库。它沉淀了所有的开发事故和最佳架构设计，保证 AI **“不会让烂事再次发生” (Prevent Shit Happening Again)**。
 
 #### 🔗 GitHub 协同项目
-- [Get Shit Done (GSD) Harness Framework](https://github.com/Lemony/get-shit-done) (提供精密的 AI 阶段规范管控、Nyquist 验证审计与自动化测试流)。
+- [Get Shit Done (GSD) Harness Framework](https://github.com/gsd-build/get-shit-done) (提供精密的 AI 阶段规范管控、Nyquist 验证审计与自动化测试流)。
 
 ---
 
@@ -526,7 +526,7 @@ Yongle Dadian and the AI engineering delivery harness **Get Shit Done (GSD)** fo
 - **Yongle Dadian**: A search and memory engine focused on "long-term memory and bug prevention". It acts as the brain, ensuring the AI **"Prevents Shit Happening Again"**.
 
 #### 🔗 GitHub Harness Repository
-- [Get Shit Done (GSD) Harness Framework](https://github.com/Lemony/get-shit-done) (Providing rigorous AI phase governance, Nyquist audits, and automated verification loops).
+- [Get Shit Done (GSD) Harness Framework](https://github.com/gsd-build/get-shit-done) (Providing rigorous AI phase governance, Nyquist audits, and automated verification loops).
 
 ---
 
