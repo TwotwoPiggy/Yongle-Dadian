@@ -1,4 +1,5 @@
 const { loadMergedConfig } = require('./yongle-config');
+const yongleRequest = require('./yongle-request');
 
 /**
  * 核心大模型交互 API：支持单独的 "agent" 配置，或在缺失时智能继承自 "embedding" 的 provider 与 apiKey。
@@ -45,7 +46,7 @@ async function getAgentCompletion(prompt, systemInstruction = '', options = {}) 
     }
     messages.push({ role: 'user', content: prompt });
 
-    const res = await fetch(`${url}/api/chat`, {
+    const res = await yongleRequest.yongleFetch(`${url}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -67,7 +68,7 @@ async function getAgentCompletion(prompt, systemInstruction = '', options = {}) 
     }
     messages.push({ role: 'user', content: prompt });
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await yongleRequest.yongleFetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ async function getAgentCompletion(prompt, systemInstruction = '', options = {}) 
       };
     }
 
-    const res = await fetch(url, {
+    const res = await yongleRequest.yongleFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
@@ -132,7 +133,7 @@ async function getAgentCompletion(prompt, systemInstruction = '', options = {}) 
     }
     messages.push({ role: 'user', content: prompt });
 
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const res = await yongleRequest.yongleFetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -166,7 +167,7 @@ async function getAgentCompletion(prompt, systemInstruction = '', options = {}) 
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const res = await fetch(url, {
+    const res = await yongleRequest.yongleFetch(url, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({

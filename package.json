@@ -35,6 +35,8 @@
     "embed:all": "node scripts/yongle-embed-all.js"
   },
   "dependencies": {
+    "axios": "^1.16.1",
+    "https-proxy-agent": "^5.0.1",
     "vectordb": "^0.21.2"
   }
 }

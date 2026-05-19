@@ -140,6 +140,15 @@
 | `apiKey` | `null` | 字符串 | 大模型访问令牌。默认自动继承 `embedding` 处的 API 密钥。 |
 | `baseUrl` | `null` | URL 字符串 | 自定义大模型服务基地址。默认继承 `embedding` 处的设置。 |
 
+#### `yongle.proxy` (网络代理配置)
+| 字段 | 默认值 | 可选值 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `proxy` | `null` | 代理 URL 字符串 | 所有出站 API 请求的 HTTP/HTTPS 代理地址。格式如 `http://127.0.0.1:7890`。当此项未配置时，系统自动检测环境变量 `HTTPS_PROXY` 或 `HTTP_PROXY` 作为回退。 |
+
+> **优先级**: `yongle.proxy` 配置 > `HTTPS_PROXY` 环境变量 > `HTTP_PROXY` 环境变量 > 直连
+>
+> **TODO**: SOCKS5 代理支持 (`socks5://...`) 计划在未来版本中加入。
+
 ---
 
 ### 配置示例 (config.json)
@@ -157,7 +166,8 @@
     },
     "search": {
       "default_limit": 10
-    }
+    },
+    "proxy": "http://127.0.0.1:7890"
   },
   "embedding": {
     "provider": "gemini",

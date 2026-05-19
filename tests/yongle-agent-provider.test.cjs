@@ -28,41 +28,49 @@ describe('yongle agent provider configuration and usage', () => {
   });
   
   describe('API calls and smart inheritance', () => {
-    let originalFetch;
+    let requestModule;
+    let originalYongleFetch;
     let lastUrl = null;
     let lastBody = null;
     let lastHeaders = null;
     
     before(() => {
-      originalFetch = globalThis.fetch;
-      globalThis.fetch = async (url, options) => {
+      // yongle-agent-api.js 通过 require('./yongle-request') 获取模块对象，
+      // 然后调用 yongleRequest.yongleFetch()，所以我们直接 patch 该模块导出的属性即可。
+      requestModule = require('../scripts/yongle-request.js');
+      originalYongleFetch = requestModule.yongleFetch;
+      
+      requestModule.yongleFetch = async (url, options = {}) => {
         lastUrl = url;
         lastBody = options.body ? JSON.parse(options.body) : null;
-        lastHeaders = options.headers;
+        lastHeaders = options.headers || {};
         
         // 返回模拟响应数据
         if (url.includes('api.openai.com')) {
           return {
-            ok: true,
-            json: async () => ({ choices: [{ message: { content: 'Mock OpenAI response' } }] })
+            ok: true, status: 200, statusText: 'OK',
+            json: async () => ({ choices: [{ message: { content: 'Mock OpenAI response' } }] }),
+            text: async () => JSON.stringify({ choices: [{ message: { content: 'Mock OpenAI response' } }] })
           };
         } else if (url.includes('generativelanguage.googleapis.com')) {
           return {
-            ok: true,
-            json: async () => ({ candidates: [{ content: { parts: [{ text: 'Mock Gemini response' }] } }] })
+            ok: true, status: 200, statusText: 'OK',
+            json: async () => ({ candidates: [{ content: { parts: [{ text: 'Mock Gemini response' }] } }] }),
+            text: async () => JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Mock Gemini response' }] } }] })
           };
         } else if (url.includes('11434')) {
           return {
-            ok: true,
-            json: async () => ({ message: { content: 'Mock Ollama response' } })
+            ok: true, status: 200, statusText: 'OK',
+            json: async () => ({ message: { content: 'Mock Ollama response' } }),
+            text: async () => JSON.stringify({ message: { content: 'Mock Ollama response' } })
           };
         }
-        return { ok: false, statusText: 'Bad Request' };
+        return { ok: false, status: 400, statusText: 'Bad Request', json: async () => ({}), text: async () => '' };
       };
     });
     
     after(() => {
-      globalThis.fetch = originalFetch;
+      requestModule.yongleFetch = originalYongleFetch;
     });
     
     it('should correctly call gemini provider and send system instruction', async () => {

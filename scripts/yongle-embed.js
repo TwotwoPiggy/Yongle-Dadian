@@ -4,6 +4,7 @@ const os = require('os');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
 const { loadMergedConfig } = require('./yongle-config');
+const yongleRequest = require('./yongle-request');
 
 const homedir = os.homedir();
 const configPath = path.join(homedir, '.yongle_knowledge', 'config.json');
@@ -17,7 +18,7 @@ function logError(message) {
 async function getEmbedding(text, provider, model, apiKey, baseUrl) {
   if (provider === 'ollama') {
     const url = baseUrl || 'http://localhost:11434';
-    const res = await fetch(`${url}/api/embeddings`, {
+    const res = await yongleRequest.yongleFetch(`${url}/api/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: model || 'nomic-embed-text', prompt: text })
@@ -27,7 +28,7 @@ async function getEmbedding(text, provider, model, apiKey, baseUrl) {
     return data.embedding;
 
   } else if (provider === 'openai') {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
+    const res = await yongleRequest.yongleFetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -42,7 +43,7 @@ async function getEmbedding(text, provider, model, apiKey, baseUrl) {
   } else if (provider === 'gemini') {
     const m = model || 'gemini-embedding-001';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:embedContent`;
-    const res = await fetch(url, {
+    const res = await yongleRequest.yongleFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +62,7 @@ async function getEmbedding(text, provider, model, apiKey, baseUrl) {
     return data.embedding.values;
 
   } else if (provider === 'deepseek') {
-    const res = await fetch('https://api.deepseek.com/v1/embeddings', {
+    const res = await yongleRequest.yongleFetch('https://api.deepseek.com/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +83,7 @@ async function getEmbedding(text, provider, model, apiKey, baseUrl) {
     const url = baseUrl.replace(/\/+$/, '') + '/embeddings';
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-    const res = await fetch(url, {
+    const res = await yongleRequest.yongleFetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify({ model: model || 'default', input: text })
