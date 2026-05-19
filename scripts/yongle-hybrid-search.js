@@ -86,6 +86,16 @@ async function main() {
 
     const vector = await getEmbedding(keyword, embedConfig.provider, embedConfig.model, embedConfig.apiKey, embedConfig.baseUrl);
 
+    if (vector === null) {
+      if (process.stdout.isTTY && process.stdout.moveCursor) {
+        process.stdout.moveCursor(0, -linesPrinted);
+        process.stdout.clearScreenDown();
+      }
+      printResults(`Keyword Match (Semantic Search Disabled): "${keyword}"`, sqliteResults);
+      console.log(`\n\x1b[90m💡 Note: Semantic search is disabled in config.\x1b[0m`);
+      return;
+    }
+
     // 3. Query LanceDB
     const vectorResults = await queryLanceDB(scope, JSON.stringify(vector), "10");
 

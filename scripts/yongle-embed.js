@@ -18,7 +18,7 @@ function logError(message) {
 async function getEmbedding(text, provider, model, apiKey, baseUrl) {
   const config = loadMergedConfig();
   if (config.embedding && config.embedding.enabled === false) {
-    throw new Error('Embedding API is disabled in config');
+    return null;
   }
 
   if (provider === 'ollama') {

@@ -175,7 +175,7 @@ describe('yongle-request proxy configuration', () => {
       configModule.loadMergedConfig = originalConfigLoader;
     });
 
-    it('should throw error when embedding.enabled is false', async () => {
+    it('should return null when embedding.enabled is false', async () => {
       mockConfig = {
         embedding: {
           enabled: false,
@@ -183,10 +183,8 @@ describe('yongle-request proxy configuration', () => {
         }
       };
       const { getEmbedding } = require('../scripts/yongle-embed.js');
-      await assert.rejects(
-        () => getEmbedding('test', 'openai', 'model', 'key'),
-        /Embedding API is disabled in config/
-      );
+      const result = await getEmbedding('test', 'openai', 'model', 'key');
+      assert.equal(result, null);
     });
 
     it('should throw error when agent.enabled is false', async () => {
