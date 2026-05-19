@@ -153,6 +153,19 @@ npx yongle-dadian --global --antigravity
 >
 > **智能继承机制**：若省略 `agent` 节点配置，系统在需要使用大语言模型交互（例如后台自动做梦总结、命令行独立复盘）时，会**自动继承** `embedding` 的密钥和提供商，并智能分配最佳轻量对话模型（如 Gemini 会默认匹配 `gemini-1.5-flash`）。
 
+##### 配置网络代理 (HTTP/HTTPS Proxy)
+如果您的网络处于受限环境（例如在国内调用 Gemini/OpenAI），可以配置网络代理：
+```json
+{
+  "yongle": {
+    "proxy": "http://127.0.0.1:7890",
+    "proxyEnabled": true
+  }
+}
+```
+> **代理优先级**：配置项 `yongle.proxy` > 环境变量 `HTTPS_PROXY` > `HTTP_PROXY` > 直连。
+> 临时停用代理仅需将 `proxyEnabled` 改为 `false`。
+
 ##### 配置 Gemini (推荐)
 ```json
 {
@@ -365,6 +378,19 @@ Customize your preferred embedding (semantic retrieval) and agent (completions/s
 > **Quick Start**: We provide a [config.json.example](file:///d:/Computers/AIDevelop/Tools/Skills/yongle-dadian/config.json.example) template file in the project root directory. You can copy it directly to `~/.yongle_knowledge/config.json` and fill in your API keys.
 >
 > **Smart Inheritance**: If you omit the `agent` config block, system operations requiring LLM chat completions (such as background dreaming summaries, or standalone terminal postmortems) will **automatically inherit** the API keys and provider configured under `embedding`, defaulting to their respective lightweight chat models (e.g. Gemini will automatically map to `gemini-1.5-flash`).
+
+##### Configure Network Proxy (HTTP/HTTPS Proxy)
+If you operate in restricted network environments, you can configure an outbound network proxy:
+```json
+{
+  "yongle": {
+    "proxy": "http://127.0.0.1:7890",
+    "proxyEnabled": true
+  }
+}
+```
+> **Proxy Priority**: configuration property `yongle.proxy` > environment variable `HTTPS_PROXY` > `HTTP_PROXY` > direct connection.
+> Toggle the proxy off instantly by setting `proxyEnabled` to `false`.
 
 ##### Config Gemini (Recommended)
 ```json

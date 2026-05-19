@@ -10,7 +10,9 @@
     },
     "search": {
       "default_limit": 5
-    }
+    },
+    "proxy": "http://127.0.0.1:7890",
+    "proxyEnabled": true
   },
   "embedding": {
     "provider": "gemini",
