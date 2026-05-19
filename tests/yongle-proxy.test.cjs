@@ -92,6 +92,22 @@ describe('yongle-request proxy configuration', () => {
       const result = resolveProxyUrl({});
       assert.equal(result, null);
     });
+
+    it('should return null when proxyEnabled is explicitly false even if proxy URL is set', () => {
+      const config = { yongle: { proxy: 'http://127.0.0.1:7890', proxyEnabled: false } };
+      const result = resolveProxyUrl(config);
+      assert.equal(result, null);
+    });
+
+    it('should return null when proxyEnabled is false even if env var is set', () => {
+      process.env.HTTPS_PROXY = 'http://env-proxy:9999';
+
+      const config = { yongle: { proxyEnabled: false } };
+      const result = resolveProxyUrl(config);
+      assert.equal(result, null);
+
+      delete process.env.HTTPS_PROXY;
+    });
   });
 
   describe('yongleFetch integration', () => {

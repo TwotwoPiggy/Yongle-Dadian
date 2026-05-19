@@ -12,6 +12,9 @@ const { loadMergedConfig } = require('./yongle-config');
 function resolveProxyUrl(configOverride) {
   const config = configOverride || loadMergedConfig();
 
+  // 0. 开关检查：若 proxyEnabled 显式设为 false，则跳过所有代理解析
+  if (config.yongle && config.yongle.proxyEnabled === false) return null;
+
   // 1. 配置文件中显式声明的代理
   const yongleProxy = config.yongle && config.yongle.proxy;
   if (yongleProxy) return yongleProxy;

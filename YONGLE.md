@@ -144,6 +144,7 @@
 | 字段 | 默认值 | 可选值 | 说明 |
 | :--- | :--- | :--- | :--- |
 | `proxy` | `null` | 代理 URL 字符串 | 所有出站 API 请求的 HTTP/HTTPS 代理地址。格式如 `http://127.0.0.1:7890`。当此项未配置时，系统自动检测环境变量 `HTTPS_PROXY` 或 `HTTP_PROXY` 作为回退。 |
+| `proxyEnabled` | `true` | `true`, `false` | 代理总开关。设为 `false` 时，即使配置了代理 URL 或存在环境变量，也强制走直连模式。便于临时关闭代理而无需删除配置。 |
 
 > **优先级**: `yongle.proxy` 配置 > `HTTPS_PROXY` 环境变量 > `HTTP_PROXY` 环境变量 > 直连
 >
