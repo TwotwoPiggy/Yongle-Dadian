@@ -86,7 +86,19 @@ graph TD
     end
 ```
 
+#### 🪟 Windows 平台深度优化与防错设计
+
+针对 Windows 环境下的特殊系统限制，永乐大典进行了专项的健壮性加固设计：
+
+1. **突破命令行长度溢出限制 (ENAMETOOLONG)**
+   - **痛点**：Windows `cmd.exe` 命令行具有最大 8191 字符的长度限制。在灌入高维向量（如 Gemini 768维、OpenAI 1536维）的 JSON 字符串时，直接通过子进程命令行传参必然触发 `ENAMETOOLONG` 错误，导致灌库失败。
+   - **优化**：废除通过 CLI 传参数方式，重构了 `yongle-lancedb.js` 的模块化调用，全部升级为 **内存级函数内嵌式异步加载**，彻底消除了 Shell 限制。
+2. **解决 SQLite 命令行参数 GBK 乱码转译**
+   - **痛点**：Windows 系统在跨进程传递命令行参数时，会将参数强行转换为控制台当前的 ANSI 代码页（如中文 Windows 的 `GBK / CP936`），直接传 SQL 语句给 `sqlite3` 会导致入库中文乱码。
+   - **优化**：彻底重构了 `yongle-db.js` 的子进程通信，弃用命令行 args 传参，改用 **Stdin 标准输入管道流** 灌入 SQL 指令，确保 100% 纯净的 UTF-8 中文字符录入与索引。
+
 ---
+
 
 ### 3. 安装与配置说明
 
@@ -344,7 +356,19 @@ graph TD
     end
 ```
 
+#### 🪟 Windows Platform Robustness & Hardening
+
+Yongle Dadian implements deep platform-specific hardening for Windows to guarantee high availability:
+
+1. **Bypassing CommandLine Length Limits (ENAMETOOLONG)**
+   - **Pain Point**: Windows `cmd.exe` enforces a strict 8191-character command limit. Serialized high-dimensional embedding JSON strings (e.g. 1536-dim OpenAI, 768-dim Gemini) easily exceed 10,000 characters, failing immediately with `ENAMETOOLONG` under child_process CLI arguments.
+   - **Fix**: Refactored the core embedding pipeline to utilize **in-memory module calls** (`require` imports of `yongle-lancedb.js` methods) instead of spawning subprocess command lines, entirely bypassing the Shell constraints.
+2. **Preventing SQLite Argument GBK Transcoding Garbled Text**
+   - **Pain Point**: Windows OS automatically transcodes command line arguments into the active console ANSI codepage (typically `GBK / CP936` on Chinese systems) before executing child processes, corrupting UTF-8 SQL query parameters passed to `sqlite3.exe`.
+   - **Fix**: Re-engineered `yongle-db.js` child process IPC to send queries directly through the **Stdin stream pipe** instead of argv array, guaranteeing raw, clean UTF-8 string storage and query execution.
+
 ---
+
 
 ### 3. Installation & Configuration
 
