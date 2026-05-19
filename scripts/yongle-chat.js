@@ -19,6 +19,11 @@ async function main() {
   const embedConfig = config.embedding || { provider: 'ollama' };
   const agentConfig = config.agent || {};
 
+  if (config.agent && config.agent.enabled === false) {
+    console.log(`  ${yellow}💡 提示: Agent API 已在配置中停用 (agent.enabled = false)。已跳过调用。${reset}\n`);
+    return;
+  }
+
   const provider = agentConfig.provider || embedConfig.provider || 'ollama';
   const hasKey = !!(agentConfig.apiKey || embedConfig.apiKey);
   let model = agentConfig.model;

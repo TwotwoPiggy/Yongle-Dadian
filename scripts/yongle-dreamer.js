@@ -74,6 +74,10 @@ async function runDream(type) {
     const prompt = `你是一个在后台守护的"梦境思考者"（Dreamer）。以下是项目当前的最近开发过程记录和项目状态：\n\n${contextText}\n\n根据以上内容，请生成一个关于该静默期的“${type === 'quick' ? '开发片段沉淀与洞察' : '长周期静默开发反思'}”。要求：\n1. 提炼核心工作进度；\n2. 提出1-2条潜在的技术优化、风险防范或可提炼的经验条目设想。\n3. 字数控制在200-300字以内，采用极其专业、简洁的中文开发者口吻。`;
     
     summary = await getAgentCompletion(prompt, '你是一个专门在静默期整理开发记忆的后台梦境守护者（Yongle Dreamer）。');
+    if (summary === '') {
+      console.log(`[${timestamp}] 💡 梦境生成跳过 (Agent API 在配置中已被停用)`);
+      return;
+    }
   } catch (err) {
     console.error(`[${timestamp}] ⚠ 梦境调用 Agent 失败: ${err.message}`);
     summary = `Failed to invoke Agent: ${err.message}`;
