@@ -1,9 +1,52 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { runSql } = require('./yongle-db.js');
-const { queryLanceDB } = require('./yongle-lancedb.js');
 const { getEmbedding } = require('./yongle-embed.js');
 const { loadMergedConfig } = require('./yongle-config.js');
+
+function getQueryCachePath() {
+  return path.join(os.homedir(), '.yongle_knowledge', 'query_cache.json');
+}
+
+function getCachedEmbedding(keyword, provider, model) {
+  const cachePath = getQueryCachePath();
+  if (!fs.existsSync(cachePath)) return null;
+  try {
+    const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    const key = `${provider}:${model}:${keyword}`;
+    return cache[key] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveCachedEmbedding(keyword, provider, model, vector) {
+  const cachePath = getQueryCachePath();
+  let cache = {};
+  if (fs.existsSync(cachePath)) {
+    try {
+      cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    } catch (e) {
+      cache = {};
+    }
+  }
+  const key = `${provider}:${model}:${keyword}`;
+  cache[key] = vector;
+
+  // Evict old entries if cache grows past 200 items
+  const keys = Object.keys(cache);
+  if (keys.length > 200) {
+    delete cache[keys[0]];
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2), 'utf8');
+  } catch (e) {
+    // Ignore write failures gracefully
+  }
+}
 
 function formatResult(item, isSemantic = false) {
   let tagsStr = '';
@@ -84,7 +127,18 @@ async function main() {
     const config = loadMergedConfig();
     const embedConfig = config.embedding || { provider: 'ollama', model: 'nomic-embed-text' };
 
-    const vector = await getEmbedding(keyword, embedConfig.provider, embedConfig.model, embedConfig.apiKey, embedConfig.baseUrl);
+    let vector = null;
+    const isEmbeddingEnabled = !(config.embedding && config.embedding.enabled === false);
+
+    if (isEmbeddingEnabled) {
+      vector = getCachedEmbedding(keyword, embedConfig.provider, embedConfig.model);
+      if (!vector) {
+        vector = await getEmbedding(keyword, embedConfig.provider, embedConfig.model, embedConfig.apiKey, embedConfig.baseUrl);
+        if (vector) {
+          saveCachedEmbedding(keyword, embedConfig.provider, embedConfig.model, vector);
+        }
+      }
+    }
 
     if (vector === null) {
       if (process.stdout.isTTY && process.stdout.moveCursor) {
@@ -96,7 +150,8 @@ async function main() {
       return;
     }
 
-    // 3. Query LanceDB
+    // 3. Query LanceDB (Lazy Loaded)
+    const { queryLanceDB } = require('./yongle-lancedb.js');
     const vectorResults = await queryLanceDB(scope, JSON.stringify(vector), "10");
 
     // 4. Merge via RRF with 1.5x FTS Boost
