@@ -182,11 +182,13 @@ npx yongle-dadian --global --antigravity
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "gemini",
         "model": "gemini-embedding-001",
         "apiKey": "YOUR_GEMINI_API_KEY"
     },
     "agent": {
+        "enabled": true,
         "provider": "gemini",
         "model": "gemini-1.5-flash",
         "apiKey": "YOUR_GEMINI_API_KEY"
@@ -198,11 +200,13 @@ npx yongle-dadian --global --antigravity
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "deepseek",
         "model": "deepseek-embedding",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
     },
     "agent": {
+        "enabled": true,
         "provider": "deepseek",
         "model": "deepseek-chat",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
@@ -214,17 +218,24 @@ npx yongle-dadian --global --antigravity
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "ollama",
         "model": "nomic-embed-text",
         "baseUrl": "http://localhost:11434"
     },
     "agent": {
+        "enabled": true,
         "provider": "ollama",
         "model": "llama3",
         "baseUrl": "http://localhost:11434"
     }
 }
 ```
+
+##### 关于启用开关 (enabled) 💡
+- **`embedding.enabled`**：若设为 `false`，则会停用高维向量生成与语义检索，搜索（`/yongle-search`）时将**自动优雅降级**为纯本地的 SQLite FTS 检索，落盘（`/yongle-confirm`）时也将跳过特征向量提取以节省资源。
+- **`agent.enabled`**：若设为 `false`，将彻底关闭大模型对话模块，防止对外部 LLM 发起任何调用（在调用复盘 `/yongle-postmortem` 等操作时会直接中断并友好提示）。
+
 
 ---
 
@@ -420,11 +431,13 @@ If you operate in restricted network environments, you can configure an outbound
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "gemini",
         "model": "gemini-embedding-001",
         "apiKey": "YOUR_GEMINI_API_KEY"
     },
     "agent": {
+        "enabled": true,
         "provider": "gemini",
         "model": "gemini-1.5-flash",
         "apiKey": "YOUR_GEMINI_API_KEY"
@@ -436,11 +449,13 @@ If you operate in restricted network environments, you can configure an outbound
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "deepseek",
         "model": "deepseek-embedding",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
     },
     "agent": {
+        "enabled": true,
         "provider": "deepseek",
         "model": "deepseek-chat",
         "apiKey": "YOUR_DEEPSEEK_API_KEY"
@@ -452,17 +467,24 @@ If you operate in restricted network environments, you can configure an outbound
 ```json
 {
     "embedding": {
+        "enabled": true,
         "provider": "ollama",
         "model": "nomic-embed-text",
         "baseUrl": "http://localhost:11434"
     },
     "agent": {
+        "enabled": true,
         "provider": "ollama",
         "model": "llama3",
         "baseUrl": "http://localhost:11434"
     }
 }
 ```
+
+##### About Enabled Flags (enabled) 💡
+- **`embedding.enabled`**: If set to `false`, it disables embedding generation and vector search. Queries (`/yongle-search`) will **gracefully fallback** to local-only SQLite FTS5 keyword matching, and postmortem confirmation (`/yongle-confirm`) will bypass vector processing to save resources.
+- **`agent.enabled`**: If set to `false`, it completely disables external LLM call requests. Features requiring chat completions (like `/yongle-postmortem`) will abort immediately with friendly warning logs.
+
 
 #### 🔄 How to Update
 
