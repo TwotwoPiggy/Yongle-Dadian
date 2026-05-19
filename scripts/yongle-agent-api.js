@@ -12,9 +12,9 @@ const yongleRequest = require('./yongle-request');
 async function getAgentCompletion(prompt, systemInstruction = '', options = {}) {
   const config = loadMergedConfig();
   
-  // 开关检查：如果 agent 显式被禁用，则返回友好说明字符串而不在 stderr 抛错
+  // 开关检查：如果 agent 显式被禁用，则返回空字符串，防止任何警告文本污染 AI 上下文
   if (config.agent && config.agent.enabled === false) {
-    return '💡 Agent API is disabled in config.';
+    return '';
   }
   
   // 获取已合并的配置

@@ -187,7 +187,7 @@ describe('yongle-request proxy configuration', () => {
       assert.equal(result, null);
     });
 
-    it('should return warning text when agent.enabled is false', async () => {
+    it('should return empty string when agent.enabled is false', async () => {
       mockConfig = {
         agent: {
           enabled: false,
@@ -196,7 +196,7 @@ describe('yongle-request proxy configuration', () => {
       };
       const { getAgentCompletion } = require('../scripts/yongle-agent-api.js');
       const result = await getAgentCompletion('test');
-      assert.equal(result, '💡 Agent API is disabled in config.');
+      assert.equal(result, '');
     });
   });
 });
