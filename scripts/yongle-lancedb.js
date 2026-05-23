@@ -3,6 +3,11 @@ const path = require('path');
 const os = require('os');
 const lancedb = require('vectordb'); // Note: 'vectordb' package as per requirements
 
+/**
+ * 获取指定 Scope 下向量数据库文件夹的绝对路径
+ * @param {'global'|'local'} scope - 作用域类型
+ * @returns {string} 绝对路径
+ */
 function getDbPath(scope) {
   if (scope === 'global') {
     return path.join(os.homedir(), '.yongle_knowledge', 'vector_store.lance');
@@ -13,6 +18,11 @@ function getDbPath(scope) {
   }
 }
 
+/**
+ * 初始化 LanceDB 数据库链接。如果对应的父文件夹不存在，则自动创建。
+ * @param {'global'|'local'} scope - 作用域类型
+ * @returns {Promise<any>} 返回连接成功的 db 示例
+ */
 async function init(scope) {
   const dbPath = getDbPath(scope);
   const dirPath = path.dirname(dbPath);
@@ -25,6 +35,13 @@ async function init(scope) {
   return db;
 }
 
+/**
+ * 插入或更新一条向量记录。
+ * 如果存在同 ID 的记录，会先执行删除再写入（实现覆盖）。
+ * @param {'global'|'local'} scope - 作用域类型
+ * @param {string} dataJson - 要插入的 JSON 字符串，格式包含 id, vector, content, tags 等字段
+ * @returns {Promise<void>}
+ */
 async function upsert(scope, dataJson) {
   const data = JSON.parse(dataJson);
   if (!data.id || !data.vector) {
@@ -66,6 +83,13 @@ async function upsert(scope, dataJson) {
   console.log(JSON.stringify({ status: 'upserted', id: data.id, table: tableName }));
 }
 
+/**
+ * 依据查询向量执行最邻近（KNN）语义向量检索
+ * @param {'global'|'local'} scope - 作用域类型
+ * @param {string} vectorJson - JSON 格式的查询向量数组字符串
+ * @param {string} [limitStr] - 返回限制数（字符串形式，如 "5"）
+ * @returns {Promise<Array<{id: string, content: string, tags: string[], _distance: number}>>}
+ */
 async function query(scope, vectorJson, limitStr) {
   const queryVector = JSON.parse(vectorJson);
   const limit = parseInt(limitStr, 10) || 5;

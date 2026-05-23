@@ -16,6 +16,10 @@ const CONFIG = {
   WATCH_TARGETS: ['.git/index', '.planning/STATE.md'],
 };
 
+/**
+ * 获取监控文件的最大静默时长（自最近修改时间以来的毫秒数）
+ * @returns {number} 静默毫秒数
+ */
 function getFileSilenceTime() {
   let minDiff = Infinity;
   for (const target of CONFIG.WATCH_TARGETS) {
@@ -35,11 +39,20 @@ function getFileSilenceTime() {
  * 注意：由于无法直接加载 C# Add-Type，此处暂以“双倍模型静默时间”作为启发式替代，
  * 或在未来版本中引入专用原生二进制包。
  */
+/**
+ * 启发式评估系统空闲时长（自最近修改时间以来的毫秒数）
+ * @returns {number} 空闲毫秒数
+ */
 function getSystemIdleTime() {
   // 启发式：如果文件静默时间足够长，且没有任何正在运行的 agent 进程。
   return getFileSilenceTime(); 
 }
 
+/**
+ * 触发梦境整理流程，读取监控到的探针上下文，并调用后台 Agent 提取生成阶段性沉淀至 dreams/ 目录中
+ * @param {'quick'|'long'} type - 梦境整理类型（快速整理片段或长周期深层反思）
+ * @returns {Promise<void>}
+ */
 async function runDream(type) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] 🏮 正在进入${type === 'quick' ? '快速梦' : '长梦'}...`);
@@ -126,6 +139,10 @@ ${summary.trim()}
 let lastQuickDream = 0;
 let lastLongDream = 0;
 
+/**
+ * 梦境守护者监听主循环
+ * @returns {void}
+ */
 function main() {
   console.log('永乐大典：梦境守护者已启动... 💤');
   

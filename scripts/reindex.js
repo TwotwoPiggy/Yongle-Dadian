@@ -31,6 +31,11 @@ if (!fs.existsSync(TARGET_DIR)) {
 }
 
 // Helper to recursively find all markdown files
+/**
+ * 递归检索指定目录下的所有 Markdown 格式知识条目（自动忽略 INDEX.md / WATCHING.md 及草稿）
+ * @param {string} dir - 扫描的目标目录
+ * @returns {string[]} 包含所有目标 MD 文件的绝对路径数组
+ */
 function findMarkdownFiles(dir) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -48,6 +53,11 @@ function findMarkdownFiles(dir) {
 }
 
 // Simple YAML frontmatter parser
+/**
+ * 简易的前置 Yaml Frontmatter 元数据解析器
+ * @param {string} content - Markdown 文件内容
+ * @returns {Record<string, any>|null} 包含解析后键值对的元数据对象，若解析失败返回 null
+ */
 function parseFrontmatter(content) {
   const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---/;
   const match = content.match(frontmatterRegex);

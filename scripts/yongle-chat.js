@@ -12,6 +12,10 @@ const reset = '\x1b[0m';
 const bold = '\x1b[1m';
 const dim = '\x1b[2m';
 
+/**
+ * 命令行对话测试脚本主入口
+ * @returns {Promise<void>}
+ */
 async function main() {
   console.log(`\n  ${cyan}🏮 永乐大典 — Agent Provider 联调测试${reset}`);
   

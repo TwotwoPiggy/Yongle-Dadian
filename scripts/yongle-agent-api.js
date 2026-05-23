@@ -4,9 +4,9 @@ const yongleRequest = require('./yongle-request');
 /**
  * 核心大模型交互 API：支持单独的 "agent" 配置，或在缺失时智能继承自 "embedding" 的 provider 与 apiKey。
  *
- * @param {string} prompt 用户提示词
- * @param {string} systemInstruction 系统角色或指令（可选）
- * @param {object} options 自定义覆盖选项，支持单独指定 provider, model, apiKey, baseUrl 等
+ * @param {string} prompt - 用户提示词
+ * @param {string} [systemInstruction] - 系统角色或指令（可选）
+ * @param {import('./yongle-config').AgentConfig} [options] - 自定义覆盖选项，支持单独指定 provider, model, apiKey, baseUrl 等
  * @returns {Promise<string>} AI 生成的文本结果
  */
 async function getAgentCompletion(prompt, systemInstruction = '', options = {}) {

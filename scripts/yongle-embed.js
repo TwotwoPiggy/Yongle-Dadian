@@ -10,11 +10,25 @@ const homedir = os.homedir();
 const configPath = path.join(homedir, '.yongle_knowledge', 'config.json');
 const logPath = path.join(homedir, '.yongle_knowledge', 'failed_embeddings.log');
 
+/**
+ * 记录嵌入过程中的错误日志到 ~/.yongle_knowledge/failed_embeddings.log
+ * @param {string} message - 错误信息内容
+ * @returns {void}
+ */
 function logError(message) {
   const logMsg = `[${new Date().toISOString()}] ERROR: ${message}\n`;
   fs.appendFileSync(logPath, logMsg);
 }
 
+/**
+ * 调用指定提供商的 API 获取文本的 Embedding 向量
+ * @param {string} text - 目标文本
+ * @param {string} provider - 向量提供商（如 gemini, ollama, openai, deepseek 等）
+ * @param {string} model - 模型名称
+ * @param {string} [apiKey] - API 密钥
+ * @param {string} [baseUrl] - 自定义基准接口 URL
+ * @returns {Promise<number[]|null>} 向量数组（通常为 1536 维或 3072 维），若停用返回 null
+ */
 async function getEmbedding(text, provider, model, apiKey, baseUrl) {
   const config = loadMergedConfig();
   if (config.embedding && config.embedding.enabled === false) {
@@ -105,6 +119,10 @@ async function getEmbedding(text, provider, model, apiKey, baseUrl) {
   }
 }
 
+/**
+ * 脚本主入口：读取指定 Scope 的 MD 文件，执行 Heading 规则切片，调用接口抽取特征并 upsert 至 LanceDB。
+ * @returns {Promise<void>}
+ */
 async function main() {
   const scope = process.argv[2];
   const filepath = process.argv[3];

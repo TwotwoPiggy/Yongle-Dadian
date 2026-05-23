@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// 永乐大典 — 跨平台测试运行器
+/**
+ * @file 永乐大典 — 跨平台单元测试运行器。加载 tests/ 下的全部以 `.test.cjs` 结尾的文件并使用 Node.js 原生测试运行器并发运行。
+ */
 'use strict';
 
 const { readdirSync } = require('fs');

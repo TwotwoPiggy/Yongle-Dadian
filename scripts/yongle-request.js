@@ -3,10 +3,20 @@ const { HttpsProxyAgent } = require('https-proxy-agent');
 const { loadMergedConfig } = require('./yongle-config');
 
 /**
+ * @typedef {Object} FetchResponse
+ * @property {boolean} ok - 请求是否成功 (status 2xx)
+ * @property {number} status - HTTP 状态码
+ * @property {string} statusText - HTTP 状态文本
+ * @property {Record<string, string>} headers - 响应头
+ * @property {function(): Promise<any>} json - 解析 JSON 响应体
+ * @property {function(): Promise<string>} text - 获取纯文本响应体
+ */
+
+/**
  * 解析代理 URL。
  * 优先级：config.json 中的 yongle.proxy > 环境变量 HTTPS_PROXY > HTTP_PROXY
  *
- * @param {object} [configOverride] - 可选的外部配置对象（用于测试注入）
+ * @param {import('./yongle-config').YongleConfig} [configOverride] - 可选的外部配置对象（用于测试注入）
  * @returns {string|null} 代理 URL 或 null（直连模式）
  */
 function resolveProxyUrl(configOverride) {
@@ -56,12 +66,12 @@ function createProxyClient(proxyUrl) {
  *   - 提供 `json()` 和 `text()` 异步方法
  *
  * @param {string} url - 请求 URL
- * @param {object} [options] - 请求选项
+ * @param {Object} [options] - 请求选项
  * @param {string} [options.method] - HTTP 方法（默认 GET）
- * @param {object} [options.headers] - 请求头
+ * @param {Record<string, string>} [options.headers] - 请求头
  * @param {string} [options.body] - 请求体（JSON 字符串）
- * @param {object} [options._config] - 可选：注入自定义配置对象（用于测试）
- * @returns {Promise<{ok: boolean, status: number, statusText: string, headers: object, json: function, text: function}>}
+ * @param {import('./yongle-config').YongleConfig} [options._config] - 可选：注入自定义配置对象（用于测试）
+ * @returns {Promise<FetchResponse>}
  */
 async function yongleFetch(url, options = {}) {
   const proxyUrl = resolveProxyUrl(options._config || null);

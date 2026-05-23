@@ -13,6 +13,11 @@ const LOCAL_DB_PATH = path.join(process.cwd(), '.planning', 'yongle', 'yongle.db
 // Allow explicitly setting the DB path for testing
 const DB_PATH = process.env.YONGLE_DB_PATH || (SCOPE === 'local' ? LOCAL_DB_PATH : GLOBAL_DB_PATH);
 
+/**
+ * 在 SQLite3 数据库上执行 SQL 查询或命令（通过 stdin 管道输入以解决 Windows 参数乱码问题）
+ * @param {string} sql - 要执行的 SQL 语句
+ * @returns {string} 数据库标准输出内容
+ */
 function runSql(sql) {
     try {
         const { spawnSync } = require('child_process');
@@ -33,6 +38,10 @@ function runSql(sql) {
     }
 }
 
+/**
+ * 初始化数据库表结构。如果对应的父文件夹不存在，则自动创建。
+ * @returns {void}
+ */
 function init() {
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) {
@@ -43,6 +52,11 @@ function init() {
     console.log(`Database initialized at ${DB_PATH}`);
 }
 
+/**
+ * 插入或更新一条知识条目记录到 entries 数据库表中。
+ * 会根据命令行参数 ARGS[2] 解析 JSON 数据并自动识别其作用域。
+ * @returns {void}
+ */
 function upsert() {
     const dataJson = ARGS[2];
     if (!dataJson) {
@@ -83,6 +97,10 @@ function upsert() {
     console.log(`Upserted entry: ${data.id}`);
 }
 
+/**
+ * 执行通用 SQL 查询，并将查询结果打印输出到标准输出。
+ * @returns {void}
+ */
 function query() {
     const sql = ARGS[2];
     if (!sql) {

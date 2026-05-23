@@ -5,10 +5,21 @@ const { runSql } = require('./yongle-db.js');
 const { getEmbedding } = require('./yongle-embed.js');
 const { loadMergedConfig } = require('./yongle-config.js');
 
+/**
+ * 获取 Embedding 本地查询缓存文件的绝对路径
+ * @returns {string} 缓存文件路径
+ */
 function getQueryCachePath() {
   return path.join(os.homedir(), '.yongle_knowledge', 'query_cache.json');
 }
 
+/**
+ * 从本地缓存中查找已经生成的特征向量，防止重复请求 API 产生资费与延迟
+ * @param {string} keyword - 检索关键词
+ * @param {string} provider - 向量提供商名
+ * @param {string} model - 模型名
+ * @returns {number[]|null} 命中则返回特征向量数组，否则返回 null
+ */
 function getCachedEmbedding(keyword, provider, model) {
   const cachePath = getQueryCachePath();
   if (!fs.existsSync(cachePath)) return null;
@@ -21,6 +32,14 @@ function getCachedEmbedding(keyword, provider, model) {
   }
 }
 
+/**
+ * 保存特征向量到本地缓存，并对缓存项执行 FIFO 淘汰限制 (最多 200 项)
+ * @param {string} keyword - 检索关键词
+ * @param {string} provider - 向量提供商名
+ * @param {string} model - 模型名
+ * @param {number[]} vector - 获得的向量数组
+ * @returns {void}
+ */
 function saveCachedEmbedding(keyword, provider, model, vector) {
   const cachePath = getQueryCachePath();
   let cache = {};
@@ -48,6 +67,12 @@ function saveCachedEmbedding(keyword, provider, model, vector) {
   }
 }
 
+/**
+ * 格式化输出单条搜索结果，添加彩色样式与前置图标说明 (FTS/语义)
+ * @param {any} item - 单个检索数据条目
+ * @param {boolean} [isSemantic] - 是否为语义召回
+ * @returns {string} 格式化后的控制台打印行
+ */
 function formatResult(item, isSemantic = false) {
   let tagsStr = '';
   if (item.tags && Array.isArray(item.tags)) tagsStr = item.tags.length ? `[${item.tags.join(', ')}]` : '';
@@ -62,6 +87,12 @@ function formatResult(item, isSemantic = false) {
   return `${typeIcon} \x1b[36m${item.id}\x1b[0m ${tagsStr}\n   \x1b[90mSnippet: ${snippet}\x1b[0m`;
 }
 
+/**
+ * 打印一组检索结果，返回输出所占用的终端行数，以支持流式动态覆写 UI
+ * @param {string} title - 结果段落标题
+ * @param {any[]} results - 待打印条目数组
+ * @returns {number} 打印在控制台上的行数
+ */
 function printResults(title, results) {
   console.log(`\n\x1b[1m=== ${title} ===\x1b[0m`);
   if (results.length === 0) {
@@ -77,6 +108,10 @@ function printResults(title, results) {
   return lines;
 }
 
+/**
+ * 混合检索脚本主入口：提取 SQLite 纯文本匹配，并行提取 Query 语义特征向量，在 LanceDB 检索后执行 RRF 混合重排并动态渲染
+ * @returns {Promise<void>}
+ */
 async function main() {
   const scope = process.argv[2] || 'global';
   const rawArgs = process.argv.slice(3).join(' ');

@@ -3,6 +3,12 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 
+/**
+ * 创建子进程执行单文件向量化的 yongle-embed.js 脚本
+ * @param {'global'|'local'} scope - 作用域
+ * @param {string} filepath - 目标 Markdown 文件的绝对路径
+ * @returns {Promise<string>} 子进程标准输出内容
+ */
 function runEmbedScript(scope, filepath) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, 'yongle-embed.js');
@@ -21,6 +27,11 @@ function runEmbedScript(scope, filepath) {
   });
 }
 
+/**
+ * 递归检索目标目录下待抽取 Embedding 的所有 MD 文件
+ * @param {string} dir - 目标目录
+ * @returns {Promise<string[]>} 所有符合条件的 MD 文件绝对路径
+ */
 async function findMarkdownFiles(dir) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -37,6 +48,10 @@ async function findMarkdownFiles(dir) {
   return results;
 }
 
+/**
+ * 批量抽取主入口：高并发（限制并发数 5）调用单文件处理进程处理全部存量文件。
+ * @returns {Promise<void>}
+ */
 async function main() {
   const { loadMergedConfig } = require('./yongle-config');
   const config = loadMergedConfig();
