@@ -179,24 +179,37 @@ npx yongle-dadian --global --antigravity
 > 临时停用代理仅需将 `proxyEnabled` 改为 `false`。
 
 ##### 后台自动同步与调度配置 (Sync & Scheduler)
-支持自定义后台拉取时间间隔。**特别注意**：定时调度器配置专为 Antigravity 这类持久化 Agent 宿主环境设计：
+支持自定义后台同步与梦境守护设置。**特别注意**：定时调度器配置专为 Antigravity 这类持久化 Agent 宿主环境设计，并且**在启动时支持智能跨会话去重检测**：
 ```json
 {
   "yongle": {
     "sync": {
-      "interval": 3600000
+      "interval": 3600000,
+      "global_repo_url": "https://github.com/yourname/Yongle-Sync"
     },
     "scheduler": {
       "sync": {
         "enabled": true,
-        "cron": "0 * * * *"
+        "cron": "0 */2 * * *"
+      },
+      "dreamer": {
+        "enabled": true,
+        "cron": "*/15 * * * *",
+        "quick_idle_ms": 300000,
+        "long_idle_ms": 1800000,
+        "provider": "ollama",
+        "model": "llama3",
+        "apiKey": "Optional",
+        "baseUrl": "http://localhost:11434"
       }
     }
   }
 }
 ```
-> `interval` 为普通终端（Node 进程内）环境下的毫秒时间间隔（默认 1 小时）。普通终端退出后定时器即销毁。
-> `cron` 为 **Antigravity 智能体专属**的持久化系统任务调度表达式。系统检测到处于 Antigravity 环境时，会调用系统级调度工具确保持久运行。若将 `enabled` 置为 `false`，则彻底停用自动同步。
+> - `interval` 为普通终端（Node 进程内）环境下的自动同步毫秒间隔（默认 1 小时）。
+> - `global_repo_url` 为全局个人知识库的远程 GitHub 仓库备份路径。
+> - `cron` 为 **Antigravity 智能体专属**的持久化任务调度表达式。系统检测到处于智能体环境时，会调用系统级调度工具确保持久运行，并在首次启动时**执行 `manage_task(Action='list')` 去重检测**，确保全局有且仅有一个活动任务，防止多窗口并发导致任务重复。
+> - 梦境守护（`dreamer`）配置下允许指定专属的 LLM 模型及接口地址（如 `provider`, `model`, `baseUrl`），若不指定则会自动继承全局 `agent` 大模型配置。
 
 ##### 配置 Gemini (推荐)
 ```json
@@ -448,24 +461,37 @@ If you operate in restricted network environments, you can configure an outbound
 > Toggle the proxy off instantly by setting `proxyEnabled` to `false`.
 
 ##### Background Sync & Scheduler Config
-Customize background sync intervals. **Note**: The cron scheduler configuration is exclusively designed for persistent agent host environments like Antigravity:
+Customize background sync and dreamer options. **Note**: The cron scheduler configuration is exclusively designed for persistent agent host environments like Antigravity, and it **supports smart cross-session deduplication** on startup:
 ```json
 {
   "yongle": {
     "sync": {
-      "interval": 3600000
+      "interval": 3600000,
+      "global_repo_url": "https://github.com/yourname/Yongle-Sync"
     },
     "scheduler": {
       "sync": {
         "enabled": true,
-        "cron": "0 * * * *"
+        "cron": "0 */2 * * *"
+      },
+      "dreamer": {
+        "enabled": true,
+        "cron": "*/15 * * * *",
+        "quick_idle_ms": 300000,
+        "long_idle_ms": 1800000,
+        "provider": "ollama",
+        "model": "llama3",
+        "apiKey": "Optional",
+        "baseUrl": "http://localhost:11434"
       }
     }
   }
 }
 ```
-> `interval` sets the background pull timer in milliseconds for standard terminal execution (defaults to 1 hour, dies when process exits).
-> `cron` is **exclusive to Antigravity Agent environments** to provision OS-level persistent cron tasks. Set `enabled` to `false` to completely disable automatic syncing.
+> - `interval` sets the background pull timer in milliseconds for standard terminal execution (defaults to 1 hour, dies when process exits).
+> - `global_repo_url` specifies the remote GitHub repository backup path for your global knowledge base.
+> - `cron` is **exclusive to Antigravity Agent environments** to provision persistent cron tasks. When the agent launches a new session, it performs a **`manage_task(Action='list')` check** to ensure only one active task runs globally, preventing duplicates across multiple open chat windows.
+> - Under the `dreamer` node, you can override LLM configurations (e.g. `provider`, `model`, `baseUrl`) to decouple background postmortem extraction from your daily chat model, saving costs. If left unconfigured, it automatically inherits from the global `agent` node.
 
 ##### Config Gemini (Recommended)
 ```json

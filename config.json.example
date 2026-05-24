@@ -11,6 +11,22 @@
     "search": {
       "default_limit": 5
     },
+    "scheduler": {
+      "sync": {
+        "enabled": true,
+        "cron": "0 */2 * * *"
+      },
+      "dreamer": {
+        "enabled": true,
+        "cron": "*/15 * * * *",
+        "quick_idle_ms": 300000,
+        "long_idle_ms": 1800000,
+        "provider": "ollama",
+        "model": "llama3",
+        "apiKey": "Optional",
+        "baseUrl": "http://localhost:11434"
+      }
+    },
     "proxy": "http://127.0.0.1:7890",
     "proxyEnabled": true
   },
