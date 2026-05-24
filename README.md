@@ -313,6 +313,9 @@ npx yongle-dadian --global --antigravity
 | `/yongle-reindex` | 无 | **重建 SQLite**。全量重新扫描指定 scope 的 Markdown 目录并无损重建 SQLite 主库的 Entries 关联。 |
 | `npm run embed:all` | 无 | **并发向量灌库**。以最多 5 的并发连接池安全、快速地把所有存量文件进行 Semantic Chunking 分块，并通过防 ENAMETOOLONG 的内存模块方式录入 LanceDB。 |
 | `/yongle-sync` | 无 | **增量云同步**。在后台非阻塞式将本地库推送到绑定的 GitHub 团队/个人仓库。 |
+| `/yongle-config-export` | 无 | **配置导出**。将全局配置以 JSON 格式输出到终端，所有 `apiKey` 字段已自动排除。输出可直接用于 `/yongle-config-import`。 |
+| `/yongle-config-import` | `<file>` | **配置导入**。从指定 JSON 文件导入配置，显示 dry-run 预览并需 `[y/N]` 确认，自动排除并警告 `apiKey` 字段。 |
+| `/yongle-sync-config` | `[--pull]` | **配置同步**。默认 Push：自动剥离 apiKey，推送到远端后恢复本地。加 `--pull` 则从远端拉取并通过导入预览合并。 |
 
 ---
 
@@ -627,6 +630,9 @@ Three steps to run semantic search in your daily coding workflows:
 | `/yongle-reindex` | None | **Reindex Database**. Rescans specified markdown directories to reconstruct a fresh SQLite main database schema. |
 | `npm run embed:all` | None | **Batch Vector Backfiller**. Implements concurrent processing (pool size 5) with custom memory-upsert wrappers to bypass Windows shell length limits. |
 | `/yongle-sync` | None | **Sync Cloud Push**. Merges local memory stores to a target GitHub repository in the background. |
+| `/yongle-config-export` | None | **Config Export**. Outputs the global config as JSON to terminal with all `apiKey` fields automatically excluded. Output can be directly used with `/yongle-config-import`. |
+| `/yongle-config-import` | `<file>` | **Config Import**. Imports config from a JSON file with dry-run preview and `[y/N]` confirmation. `apiKey` fields are automatically excluded with a warning. |
+| `/yongle-sync-config` | `[--pull]` | **Config Sync**. Default Push: strips `apiKey`, pushes to remote, restores local. With `--pull`: fetches remote and merges via interactive import preview. |
 
 ---
 
