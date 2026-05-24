@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: Upgrade
-status: planning
-stopped_at: Phase 14 context gathered, ready for planning
-last_updated: "2026-05-24T08:02:49.940Z"
+milestone_name: milestone
+status: Defining requirements
+stopped_at: Phase 15 context gathered
+last_updated: "2026-05-24T08:26:35.124Z"
 last_activity: 2026-05-24 — Milestone v1.5 started
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 1
+  total_plans: 0
   completed_plans: 0
   percent: 0
 ---
@@ -77,9 +77,9 @@ Items acknowledged and deferred at milestone close on 2026-05-24:
 
 ## Session Continuity
 
-Last session: 2026-05-24 13:16
-Stopped at: Phase 14 context gathered, ready for planning
-Resume file: .planning/phases/14/14-CONTEXT.md
+Last session: 2026-05-24T08:26:35.116Z
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-update-cli-workflow/15-CONTEXT.md
 
 ## Operator Next Steps
 
