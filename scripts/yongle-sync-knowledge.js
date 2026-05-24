@@ -65,9 +65,11 @@ function syncKnowledge(options = {}) {
     console.error('Failed to commit local knowledge snapshot:', err.message);
   }
 
-  // 2. Pull with rebase
   let pullSuccess = false;
   let stashed = false;
+  let syncStatus = 'Success';
+  let conflictFiles = [];
+
   try {
     // Check if there are unstaged changes
     try {
@@ -83,14 +85,41 @@ function syncKnowledge(options = {}) {
     pullSuccess = true;
   } catch (err) {
     // Rebase conflict or other error
-    console.error(`\n⚠ 知识库同步失败: Error during git pull --rebase.`);
     try {
       execSync('git rebase --abort', { cwd: KNOWLEDGE_DIR, stdio: 'ignore' });
-      console.log('Rebase aborted to preserve local state.');
-    } catch (abortErr) {
-      // ignore abort error if it wasn't a rebase in progress
+    } catch (abortErr) {}
+
+    console.log('Attempting auto-merge and conflict preservation...');
+    try {
+      execSync('git merge FETCH_HEAD --no-commit', { cwd: KNOWLEDGE_DIR, stdio: 'ignore' });
+      execSync('git commit -m "chore: auto-resolved knowledge sync"', { cwd: KNOWLEDGE_DIR, stdio: 'ignore' });
+      pullSuccess = true;
+    } catch (mergeErr) {
+      try {
+        const unmerged = execSync('git ls-files -u', { cwd: KNOWLEDGE_DIR, encoding: 'utf8' });
+        const lines = unmerged.trim().split('\n').filter(Boolean);
+        const files = [...new Set(lines.map(line => line.split('\t')[1]))];
+        
+        for (const file of files) {
+          const conflictFile = file + '.conflict.md';
+          try {
+            execSync(`git show :2:"${file}" > "${conflictFile}"`, { cwd: KNOWLEDGE_DIR });
+          } catch(e) {}
+          execSync(`git checkout --theirs "${file}"`, { cwd: KNOWLEDGE_DIR });
+          execSync(`git add "${file}"`, { cwd: KNOWLEDGE_DIR });
+          conflictFiles.push(conflictFile);
+        }
+        
+        execSync('git commit -m "chore: auto-resolved conflicts and backed up local to .conflict.md"', { cwd: KNOWLEDGE_DIR, stdio: 'ignore' });
+        pullSuccess = true;
+        syncStatus = 'Conflict';
+        console.warn(`\n\x1b[33m⚠ 同步冲突警告\x1b[0m\n检测到冲突，已使用远程版本覆盖。\n你的本地修改已备份到以下文件，请手动检视：\n${conflictFiles.join('\n')}\n`);
+      } catch (resolveErr) {
+        syncStatus = 'Error';
+        console.error(`\n⚠ 知识库同步失败: 自动解决冲突出错。`, resolveErr.message);
+        try { execSync('git merge --abort', { cwd: KNOWLEDGE_DIR, stdio: 'ignore' }); } catch(e){}
+      }
     }
-    return;
   } finally {
     if (stashed) {
       console.log('Restoring stashed changes...');
@@ -120,16 +149,42 @@ function syncKnowledge(options = {}) {
   }
 
   // 4. Push if not pullOnly
-  if (!pullOnly) {
+  if (!pullOnly && pullSuccess) {
     console.log('Pushing to remote...');
     try {
       execSync('git push', { cwd: KNOWLEDGE_DIR, stdio: 'inherit' });
       console.log('Knowledge synchronization complete.');
     } catch (err) {
+      syncStatus = 'Error';
       console.error(`\n⚠ 知识库同步失败: Failed to push to remote.`, err.message);
     }
-  } else {
+  } else if (pullOnly) {
     console.log('Knowledge pull complete. (push skipped due to pullOnly flag)');
+  }
+
+  // 5. Write sync status
+  writeSyncStatus(syncStatus, conflictFiles);
+}
+
+function writeSyncStatus(status, conflictFiles) {
+  try {
+    const planningDir = path.join(process.cwd(), '.planning');
+    if (!fs.existsSync(planningDir)) return;
+
+    let pendingPushes = '0';
+    try {
+      pendingPushes = execSync('git rev-list HEAD...@{u} --count', { cwd: KNOWLEDGE_DIR, encoding: 'utf8' }).trim();
+    } catch (e) {}
+
+    const statusContent = `# Sync Status
+**Last Sync:** ${new Date().toISOString()}
+**Status:** ${status}
+**Pending Pushes:** ${pendingPushes}
+${conflictFiles.length > 0 ? '\n**Conflicts Generated:**\n' + conflictFiles.map(f => '- ' + f).join('\n') : ''}
+`;
+    fs.writeFileSync(path.join(planningDir, 'SYNC-STATUS.md'), statusContent, 'utf8');
+  } catch (err) {
+    // ignore status write errors
   }
 }
 
