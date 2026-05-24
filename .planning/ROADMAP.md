@@ -72,6 +72,7 @@
 **Plans:** TBD
 
 ### Phase 14: Sync Robustness & Observability
+**Status:** complete
 **Goal:** Users are warned of conflicts, can inspect sync status, and background sync keeps knowledge current
 **Depends on:** Phase 13
 **Requirements:** HRDN-01, HRDN-02, HRDN-03
