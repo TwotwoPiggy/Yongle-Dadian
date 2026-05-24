@@ -40,6 +40,8 @@ const YONGLE_SKILLS = [
   'yongle-reindex',
   'yongle-sync',
   'yongle-update',
+  'yongle-config-export',
+  'yongle-config-import',
 ];
 
 const normalizedPackageRoot = packageRoot.replace(/\\/g, '/');
