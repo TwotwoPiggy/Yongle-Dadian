@@ -63,13 +63,21 @@ async function importConfig() {
       incomingConfig = stripApiKeys(incomingConfig);
     }
 
-    const localConfig = stripApiKeysFromFile(globalConfigPath);
+    const localConfigClean = stripApiKeysFromFile(globalConfigPath);
     
-    printDryRunPreview(localConfig, incomingConfig);
+    printDryRunPreview(localConfigClean, incomingConfig);
 
     const answer = await askConfirmation('Apply this import? [y/N]: ');
     if (answer === 'y' || answer === 'yes') {
-      const mergedConfig = deepMerge(localConfig, incomingConfig);
+      let localConfigRaw = {};
+      if (fs.existsSync(globalConfigPath)) {
+        try {
+          localConfigRaw = JSON.parse(fs.readFileSync(globalConfigPath, 'utf8'));
+        } catch (e) {
+          localConfigRaw = {};
+        }
+      }
+      const mergedConfig = deepMerge(localConfigRaw, incomingConfig);
       
       const configDir = path.dirname(globalConfigPath);
       if (!fs.existsSync(configDir)) {

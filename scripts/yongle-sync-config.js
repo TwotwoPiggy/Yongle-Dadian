@@ -67,10 +67,12 @@ function pullConfig() {
     fs.writeFileSync(remoteFile, remoteContent, 'utf8');
     
     console.log('Triggering interactive merge...\n');
-    execSync(`node "${path.join(__dirname, 'yongle-config-import.js')}" "${remoteFile}"`, { stdio: 'inherit' });
-    
-    if (fs.existsSync(remoteFile)) {
-      fs.unlinkSync(remoteFile);
+    try {
+      execSync(`node "${path.join(__dirname, 'yongle-config-import.js')}" "${remoteFile}"`, { stdio: 'inherit' });
+    } finally {
+      if (fs.existsSync(remoteFile)) {
+        fs.unlinkSync(remoteFile);
+      }
     }
   } catch (err) {
     console.error('Failed to pull:', err.message);

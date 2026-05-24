@@ -67,9 +67,13 @@ None yet.
 
 ## Deferred Items
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+Items acknowledged and deferred at milestone close on 2026-05-24:
+
+| Category | Item | Status |
+|----------|------|--------|
+| todo | 2026-05-19-yongle-ts-refactoring.md | pending |
+| todo | 2026-05-20-gengxin-gongneng.md | pending |
+| seed | SEED-001-config-knowledge-sync | dormant |
 
 ## Session Continuity
 
