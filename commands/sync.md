@@ -1,7 +1,7 @@
 ---
 name: yongle:sync
 description: 触发"永乐大典"知识库的云同步。支持同步全局经验到 GitHub 以及同步项目级经验到项目 Repo。
-argument-hint: [--scope all|project|global] [--setup] [--config [--pull]]
+argument-hint: [status] [--scope all|project|global] [--setup] [--config [--pull]]
 allowed-tools:
   - Read
   - Write
@@ -17,13 +17,22 @@ allowed-tools:
 </objective>
 
 <process>
-If the `--config` flag is present, execute:
-\`\`\`bash
-node scripts/yongle-sync-config.js ${ARGUMENTS}
-\`\`\`
+If the argument `status` or `--status` is present, check for the sync status file and output it:
+```bash
+if [ -f .planning/SYNC-STATUS.md ]; then
+  cat .planning/SYNC-STATUS.md
+else
+  echo "暂无后台同步状态信息。"
+fi
+```
 
-If `--config` is NOT present, execute the knowledge synchronization:
-\`\`\`bash
+Else if the `--config` flag is present, execute:
+```bash
+node scripts/yongle-sync-config.js ${ARGUMENTS}
+```
+
+Else, execute the knowledge synchronization:
+```bash
 node scripts/yongle-sync-knowledge.js
-\`\`\`
+```
 </process>
