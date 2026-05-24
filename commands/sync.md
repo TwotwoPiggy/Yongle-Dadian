@@ -17,5 +17,13 @@ allowed-tools:
 </objective>
 
 <process>
-Execute the yongle-sync workflow from @~/.gemini/antigravity/get-shit-done/workflows/yongle-sync.md end-to-end.
+If the `--config` flag is present, execute:
+\`\`\`bash
+node scripts/yongle-sync-config.js ${ARGUMENTS}
+\`\`\`
+
+If `--config` is NOT present, execute the knowledge synchronization:
+\`\`\`bash
+node scripts/yongle-sync-knowledge.js
+\`\`\`
 </process>
