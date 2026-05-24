@@ -179,7 +179,7 @@ npx yongle-dadian --global --antigravity
 > 临时停用代理仅需将 `proxyEnabled` 改为 `false`。
 
 ##### 后台自动同步与调度配置 (Sync & Scheduler)
-支持自定义后台拉取时间间隔以及 Antigravity 下的持久化 Cron 调度：
+支持自定义后台拉取时间间隔。**特别注意**：定时调度器配置专为 Antigravity 这类持久化 Agent 宿主环境设计：
 ```json
 {
   "yongle": {
@@ -195,8 +195,8 @@ npx yongle-dadian --global --antigravity
   }
 }
 ```
-> `interval` 为普通终端环境下的毫秒时间间隔（默认 1 小时）。
-> `cron` 为 Antigravity 智能体环境下的系统任务调度表达式。若将 `enabled` 置为 `false`，则彻底停用自动同步。
+> `interval` 为普通终端（Node 进程内）环境下的毫秒时间间隔（默认 1 小时）。普通终端退出后定时器即销毁。
+> `cron` 为 **Antigravity 智能体专属**的持久化系统任务调度表达式。系统检测到处于 Antigravity 环境时，会调用系统级调度工具确保持久运行。若将 `enabled` 置为 `false`，则彻底停用自动同步。
 
 ##### 配置 Gemini (推荐)
 ```json
@@ -448,7 +448,7 @@ If you operate in restricted network environments, you can configure an outbound
 > Toggle the proxy off instantly by setting `proxyEnabled` to `false`.
 
 ##### Background Sync & Scheduler Config
-Customize background sync intervals and persistent cron tasks under Antigravity environments:
+Customize background sync intervals. **Note**: The cron scheduler configuration is exclusively designed for persistent agent host environments like Antigravity:
 ```json
 {
   "yongle": {
@@ -464,8 +464,8 @@ Customize background sync intervals and persistent cron tasks under Antigravity 
   }
 }
 ```
-> `interval` sets the background pull timer in milliseconds (defaults to 1 hour in normal terminal).
-> `cron` is used by the Antigravity agent scheduler. Set `enabled` to `false` to completely disable automatic syncing.
+> `interval` sets the background pull timer in milliseconds for standard terminal execution (defaults to 1 hour, dies when process exits).
+> `cron` is **exclusive to Antigravity Agent environments** to provision OS-level persistent cron tasks. Set `enabled` to `false` to completely disable automatic syncing.
 
 ##### Config Gemini (Recommended)
 ```json
