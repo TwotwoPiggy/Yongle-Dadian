@@ -2,13 +2,13 @@
 
 **Goal**: 实现 Yongle Dadian 的自更新机制，允许通过命令一键升级并重新注入最新技能。
 **Requirements Mapped**: 4/4
-**Status**: Planning Phase 15
+**Status**: Completed Phase 15
 
 ## Phases
 
 | Phase | Title | Goal | REQ-IDs | Status |
 |-------|-------|------|---------|--------|
-| 15 | Update CLI & Workflow | 实现 yongle-update 命令和更新脚本 | UPGRADE-01, UPGRADE-02, UPGRADE-03, UPGRADE-04 | Not Started |
+| 15 | Update CLI & Workflow | 实现 yongle-update 命令和更新脚本 | UPGRADE-01, UPGRADE-02, UPGRADE-03, UPGRADE-04 | Completed |
 
 ---
 
