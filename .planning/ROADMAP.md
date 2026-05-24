@@ -99,8 +99,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 12. Config Sync & Manual Export/Import | 0/2 | Not started | – |
-| 13. Multi-Device Knowledge Pull & Merge | 2/2 | Complete | – |
+| 12. Config Sync & Manual Export/Import | 2/2 | Complete | 2026-05-24 |
+| 13. Multi-Device Knowledge Pull & Merge | 2/2 | Complete | 2026-05-24 |
 | 14. Sync Robustness & Observability | 0/– | Not started | – |
 
 ## Future Ideas
