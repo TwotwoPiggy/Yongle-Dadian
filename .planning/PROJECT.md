@@ -8,12 +8,14 @@
 
 让 AI Agent 在日常开发流程中能自主捕捉、学习并沉淀经验，彻底消除相同错误的重复发生和宝贵对话上下文的浪费。
 
-## Current Milestone: Planning next milestone
+## Current Milestone: v1.5 Upgrade
 
-**Goal:** 规划下一个阶段的迭代目标。
+**Goal:** 实现 Yongle Dadian 的自更新机制，允许通过命令一键升级并重新注入最新技能。
 
 **Target features:**
-- *(规划中)*
+- 提供版本检查与获取最新版本的机制
+- 实现一键更新逻辑 (支持 Git / NPM 模式)
+- 更新完成后自动将最新的 Skills 与 Workflows 重新注入至大模型工作区
 
 ## Requirements
 
