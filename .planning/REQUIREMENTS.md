@@ -13,4 +13,7 @@
 - [后台自动更新] — 仅保留手动触发命令，避免意外中断。
 
 ## Traceability
-*(To be updated by roadmap)*
+- **UPGRADE-01** → Phase 15
+- **UPGRADE-02** → Phase 15
+- **UPGRADE-03** → Phase 15
+- **UPGRADE-04** → Phase 15
