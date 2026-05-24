@@ -75,4 +75,5 @@ None yet.
 
 Last session: 2026-05-24 11:13
 Stopped at: Phase 13 context gathered, ready for planning
-Resume file: .planning/phases/13/13-CONTEXT.md
+Resume file: .planning/phases/13/13b-PLAN.md
+Stopped at: Phase 13 planned, ready to execute
