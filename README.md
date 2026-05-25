@@ -129,16 +129,23 @@ npx yongle-dadian --global --antigravity
 
 更新永乐大典非常简单，它与你的安装途径一一对应：
 
-- **途径 A（npm 全局）**：直接再次运行 `npx` 即可拉取最新版：
-  ```powershell
-  npx yongle-dadian --global --antigravity
+- **自动化升级（推荐）**：直接在支持技能的 AI Agent 终端中运行：
+  ```markdown
+  @[/yongle-update]
   ```
-- **途径 B（源码克隆）**：拉取最新代码并重新运行安装器：
-  ```powershell
-  git pull
-  npm install
-  node bin/install.js --global --antigravity
-  ```
+  该命令会自动识别安装模式（npm 全局 / Git 源码克隆），拉取最新版本，执行必要的依赖更新，并自动对所有已激活的 AI 运行时重注入技能。
+
+- **手动升级**：
+  - **途径 A（npm 全局）**：直接再次运行 `npx` 即可拉取最新版：
+    ```powershell
+    npx yongle-dadian --global --antigravity
+    ```
+  - **途径 B（源码克隆）**：拉取最新代码并重新运行安装器：
+    ```powershell
+    git pull
+    npm install
+    node bin/install.js --global --antigravity
+    ```
 
 #### 🗑️ 如何卸载
 
@@ -315,7 +322,8 @@ npx yongle-dadian --global --antigravity
 | `/yongle-sync` | 无 | **增量云同步**。在后台非阻塞式将本地库推送到绑定的 GitHub 团队/个人仓库。 |
 | `/yongle-config-export` | 无 | **配置导出**。将全局配置以 JSON 格式输出到终端，所有 `apiKey` 字段已自动排除。输出可直接用于 `/yongle-config-import`。 |
 | `/yongle-config-import` | `<file>` | **配置导入**。从指定 JSON 文件导入配置，显示 dry-run 预览并需 `[y/N]` 确认，自动排除并警告 `apiKey` 字段。 |
-| `/yongle-sync-config` | `[--pull]` | **配置同步**。默认 Push：自动剥离 apiKey，推送到远端后恢复本地。加 `--pull` 则从远端拉取并通过导入预览合并。 |
+| `/yongle-sync-config` | `[--pull]` | 配置同步。默认 Push：自动剥离 apiKey，推送到远端后恢复本地。加 `--pull` 则从远端拉取并通过导入预览合并。 |
+| `/yongle-update` | 无 | **自动升级**。检测最新代码，升级依赖（如有 package-lock 变更），并自动重新注入技能到所有激活的智能体环境。 |
 
 ---
 
@@ -559,16 +567,23 @@ Customize background sync and dreamer options. **Note**: The cron scheduler conf
 
 Updating Yongle Dadian is as simple as re-running the installation steps:
 
-- **Approach A (npm Global)**: Just run the `npx` command again to fetch and link the latest version:
-  ```powershell
-  npx yongle-dadian --global --antigravity
+- **Automated Update (Recommended)**: Run the following command in any agent session equipped with Yongle skills:
+  ```markdown
+  @[/yongle-update]
   ```
-- **Approach B (Source Clone)**: Pull latest git changes and re-run installer:
-  ```powershell
-  git pull
-  npm install
-  node bin/install.js --global --antigravity
-  ```
+  This command auto-detects your installation pathway (npm global or Git source clone), pulls the latest code, resolves dependencies, and re-injects all active agent runtimes with updated skills automatically.
+
+- **Manual Update**:
+  - **Approach A (npm Global)**: Just run the `npx` command again to fetch and link the latest version:
+    ```powershell
+    npx yongle-dadian --global --antigravity
+    ```
+  - **Approach B (Source Clone)**: Pull latest git changes and re-run installer:
+    ```powershell
+    git pull
+    npm install
+    node bin/install.js --global --antigravity
+    ```
 
 #### 🗑️ How to Uninstall
 
@@ -633,6 +648,7 @@ Three steps to run semantic search in your daily coding workflows:
 | `/yongle-config-export` | None | **Config Export**. Outputs the global config as JSON to terminal with all `apiKey` fields automatically excluded. Output can be directly used with `/yongle-config-import`. |
 | `/yongle-config-import` | `<file>` | **Config Import**. Imports config from a JSON file with dry-run preview and `[y/N]` confirmation. `apiKey` fields are automatically excluded with a warning. |
 | `/yongle-sync-config` | `[--pull]` | **Config Sync**. Default Push: strips `apiKey`, pushes to remote, restores local. With `--pull`: fetches remote and merges via interactive import preview. |
+| `/yongle-update` | None | **Self-update CLI**. Detects latest changes, upgrades package dependencies if lockfile changes, and programmatically re-injects updated skills. |
 
 ---
 
