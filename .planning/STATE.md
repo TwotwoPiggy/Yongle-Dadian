@@ -73,10 +73,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-24T08:26:35.116Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/phases/15-update-cli-workflow/15-CONTEXT.md
+Last session: 2026-06-13T11:05:00.000Z
+Stopped at: Phase 16 context gathered
+Resume file: .planning/phases/16-core-update-mechanism/16-CONTEXT.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Proceed to `/gsd-plan-phase 16`
