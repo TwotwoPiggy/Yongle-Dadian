@@ -8,13 +8,12 @@
 
 让 AI Agent 在日常开发流程中能自主捕捉、学习并沉淀经验，彻底消除相同错误的重复发生和宝贵对话上下文的浪费。
 
-## Current Milestone: Planning Next Milestone
+## Current Milestone: v1.6 支持更新功能
 
-**Goal:** 规划下一个阶段的 AI 伴生能力和优化方向。
+**Goal:** 实现应用的更新能力。
 
 **Target features:**
-- Web 查看器（Viewer）原型设计与安全低开销后台管理
-- 混合检索性能与冷启动流程进一步调优
+- 支持更新功能
 
 ## Requirements
 
