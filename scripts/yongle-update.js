@@ -67,15 +67,42 @@ function getFileMd5(filePath) {
   }
 }
 
+// ─── 检查 Git 工作区是否有未提交的修改 ─────────────────────────
+function checkGitDirty() {
+  try {
+    const status = execSync('git status --porcelain -uno', { cwd: packageRoot, encoding: 'utf8' }).trim();
+    if (status) {
+      console.error(`\n  ${red}✗ 错误: 检测到本地核心代码有未提交的修改，为了避免冲突，请清理或提交修改后再执行更新。${reset}\n`);
+      process.exit(1);
+    }
+  } catch (err) {
+    // 忽略异常，继续流程
+  }
+}
+
+// ─── 解析并获取目标 Commit ───────────────────────────────────
+function resolveTargetCommit(target) {
+  try {
+    return execSync(`git rev-parse --verify origin/${target}`, { cwd: packageRoot, encoding: 'utf8' }).trim();
+  } catch (e) {}
+  try {
+    return execSync(`git rev-parse --verify ${target}`, { cwd: packageRoot, encoding: 'utf8' }).trim();
+  } catch (e) {}
+  return null;
+}
+
 // ─── 主更新函数 ─────────────────────────────────────────────
 function main() {
   console.log(banner);
+
+  const targetVersion = process.argv[2];
 
   const isGit = fs.existsSync(path.join(packageRoot, '.git'));
   console.log(`  安装模式检测: ${bold}${isGit ? 'Git 仓库开发模式' : 'npm 全局包模式'}${reset}\n`);
 
   let originalCommit = '';
   if (isGit) {
+    checkGitDirty();
     try {
       originalCommit = execSync('git rev-parse HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
     } catch (err) {
@@ -95,46 +122,77 @@ function main() {
       console.log(`      ${cyan}▸${reset} 执行 git fetch 拉取远程状态...`);
       execSync('git fetch origin', { cwd: packageRoot, stdio: 'ignore' });
       
-      let branch = 'master';
-      try {
-        branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
-      } catch (e) {}
-
-      let count = 0;
-      try {
-        count = parseInt(execSync(`git rev-list HEAD..origin/${branch} --count`, { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-      } catch (err) {
-        // 如果当前分支没有追踪分支，尝试 origin/master 和 origin/main
+      if (targetVersion) {
+        const targetCommit = resolveTargetCommit(targetVersion);
+        if (!targetCommit) {
+          console.error(`    ${red}✗${reset} 错误: 找不到目标版本 "${targetVersion}" (本地和远程均不存在该分支或标签)\n`);
+          process.exit(1);
+        }
+        
+        const currentCommit = execSync('git rev-parse HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+        if (currentCommit === targetCommit) {
+          hasUpdate = false;
+          console.log(`    ${green}✓${reset} 当前已处于目标版本 "${targetVersion}" (${targetCommit.slice(0, 7)})，无需更新。\n`);
+        } else {
+          hasUpdate = true;
+          latestInfo = `目标版本: "${targetVersion}" (${targetCommit.slice(0, 7)}) (当前 Commit: ${currentCommit.slice(0, 7)})`;
+        }
+      } else {
+        let branch = 'master';
         try {
-          count = parseInt(execSync('git rev-list HEAD..origin/master --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-        } catch (e) {
+          branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+        } catch (e) {}
+
+        let count = 0;
+        try {
+          count = parseInt(execSync(`git rev-list HEAD..origin/${branch} --count`, { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
+        } catch (err) {
           try {
-            count = parseInt(execSync('git rev-list HEAD..origin/main --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-          } catch (e2) {
-            count = 0;
+            count = parseInt(execSync('git rev-list HEAD..origin/master --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
+          } catch (e) {
+            try {
+              count = parseInt(execSync('git rev-list HEAD..origin/main --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
+            } catch (e2) {
+              count = 0;
+            }
           }
         }
-      }
 
-      if (count > 0) {
-        hasUpdate = true;
-        latestInfo = `落后远程分支 ${count} 个 commit`;
+        if (count > 0) {
+          hasUpdate = true;
+          latestInfo = `落后远程分支 ${count} 个 commit`;
+        }
       }
     } else {
       console.log(`      ${cyan}▸${reset} 查询 npm 仓库中的最新版本...`);
       const localVersion = pkg.version;
-      const latestVersion = execSync('npm view yongle-dadian version', { encoding: 'utf8' }).trim();
       
-      if (localVersion !== latestVersion) {
-        hasUpdate = true;
-        latestInfo = `最新版本: v${latestVersion} (当前版本: v${localVersion})`;
+      if (targetVersion) {
+        try {
+          const resolvedVersion = execSync(`npm view yongle-dadian@${targetVersion} version`, { encoding: 'utf8' }).trim();
+          if (localVersion !== resolvedVersion) {
+            hasUpdate = true;
+            latestInfo = `目标版本: v${resolvedVersion} (当前版本: v${localVersion})`;
+          } else {
+            console.log(`    ${green}✓${reset} 当前已处于目标版本 v${resolvedVersion}，无需更新。\n`);
+          }
+        } catch (err) {
+          console.error(`    ${red}✗${reset} 错误: npm 仓库中不存在版本/标签 "${targetVersion}"。\n`);
+          process.exit(1);
+        }
+      } else {
+        const latestVersion = execSync('npm view yongle-dadian version', { encoding: 'utf8' }).trim();
+        if (localVersion !== latestVersion) {
+          hasUpdate = true;
+          latestInfo = `最新版本: v${latestVersion} (当前版本: v${localVersion})`;
+        }
       }
     }
 
-    if (!hasUpdate) {
+    if (hasUpdate) {
+      console.log(`    ${yellow}▸${reset} 检测到可更新/切换目标: ${latestInfo}\n`);
+    } else if (!targetVersion) {
       console.log(`    ${green}✓${reset} 已经是最新版本，无需更新。\n`);
-    } else {
-      console.log(`    ${yellow}▸${reset} 检测到新版本: ${latestInfo}\n`);
     }
   } catch (err) {
     console.error(`    ${red}✗${reset} 检测版本失败: ${err.message}\n`);
@@ -150,21 +208,47 @@ function main() {
 
   try {
     if (isGit) {
-      let branch = 'master';
-      try {
-        branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
-      } catch (e) {}
+      if (targetVersion) {
+        console.log(`      ${cyan}▸${reset} 正在切换到目标版本 "${targetVersion}"...`);
+        execSync(`git checkout ${targetVersion}`, { cwd: packageRoot, stdio: 'inherit' });
+        
+        let isBranch = false;
+        try {
+          const branchName = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          if (branchName !== 'HEAD') {
+            isBranch = true;
+          }
+        } catch (e) {}
 
-      console.log(`      ${cyan}▸${reset} 执行 git pull 拉取最新代码...`);
-      // 优先拉取当前分支，若失败 fallback 到 git pull
-      try {
-        execSync(`git pull origin ${branch}`, { cwd: packageRoot, stdio: 'inherit' });
-      } catch (err) {
-        execSync('git pull', { cwd: packageRoot, stdio: 'inherit' });
+        if (isBranch) {
+          console.log(`      ${cyan}▸${reset} 当前在分支上，执行 git pull origin ${targetVersion} 拉取最新代码...`);
+          try {
+            execSync(`git pull origin ${targetVersion}`, { cwd: packageRoot, stdio: 'inherit' });
+          } catch (err) {
+            execSync('git pull', { cwd: packageRoot, stdio: 'inherit' });
+          }
+        }
+      } else {
+        let branch = 'master';
+        try {
+          branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+        } catch (e) {}
+
+        console.log(`      ${cyan}▸${reset} 执行 git pull 拉取最新代码...`);
+        try {
+          execSync(`git pull origin ${branch}`, { cwd: packageRoot, stdio: 'inherit' });
+        } catch (err) {
+          execSync('git pull', { cwd: packageRoot, stdio: 'inherit' });
+        }
       }
     } else {
-      console.log(`      ${cyan}▸${reset} 执行 npm install -g yongle-dadian@latest...`);
-      execSync('npm install -g yongle-dadian@latest', { stdio: 'inherit' });
+      if (targetVersion) {
+        console.log(`      ${cyan}▸${reset} 执行 npm install -g yongle-dadian@${targetVersion}...`);
+        execSync(`npm install -g yongle-dadian@${targetVersion}`, { stdio: 'inherit' });
+      } else {
+        console.log(`      ${cyan}▸${reset} 执行 npm install -g yongle-dadian@latest...`);
+        execSync('npm install -g yongle-dadian@latest', { stdio: 'inherit' });
+      }
     }
     console.log(`    ${green}✓${reset} 更新代码成功。\n`);
   } catch (err) {

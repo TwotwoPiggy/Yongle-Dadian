@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: 支持更新功能
-status: planning
+status: executed
 stopped_at: 
-last_updated: "2026-06-13T10:56:00.000Z"
-last_activity: 2026-06-13 — Milestone v1.6 started
+last_updated: "2026-06-13T11:11:00.000Z"
+last_activity: 2026-06-13 — Phase 16 executed
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-13 — Milestone v1.6 started
+Phase: Phase 16: Core Update Mechanism
+Plan: Core Update Mechanism Plan
+Status: Executed
+Last activity: 2026-06-13 — Phase 16 executed and verified
 
 ## Performance Metrics
 
