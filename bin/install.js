@@ -237,6 +237,8 @@ const YONGLE_SCRIPTS = [
   'yongle-db.js',
   'yongle-dreamer.js',
   'yongle-auto-search-hook.js',
+  'yongle-auto-archive-hook.js',
+  'yongle-bg-archiver.js',
 ];
 
 function installForRuntime(runtime) {
@@ -315,13 +317,21 @@ function installForRuntime(runtime) {
       try { hooksData = JSON.parse(fs.readFileSync(hooksPath, 'utf8')); } catch(e) {}
     }
     
-    // Path to the installed hook script
-    const scriptPath = path.join(scriptsDir, 'yongle-auto-search-hook.js').replace(/\\/g, '/');
+    // Path to the installed hook scripts
+    const searchScriptPath = path.join(scriptsDir, 'yongle-auto-search-hook.js').replace(/\\/g, '/');
+    const archiveScriptPath = path.join(scriptsDir, 'yongle-auto-archive-hook.js').replace(/\\/g, '/');
+    
     hooksData['yongle-autonomous'] = {
       "PreInvocation": [
         {
           "type": "command",
-          "command": `node "${scriptPath}"`
+          "command": `node "${searchScriptPath}"`
+        }
+      ],
+      "Stop": [
+        {
+          "type": "command",
+          "command": `node "${archiveScriptPath}"`
         }
       ]
     };
