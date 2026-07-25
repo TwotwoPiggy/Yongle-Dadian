@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { getAgentCompletion } = require('./yongle-agent-api.js');
+const { loadMergedConfig } = require('./yongle-config.js');
 const os = require('os');
 
 // 获取日志路径
@@ -55,8 +56,10 @@ ${context}`;
 
     if (isAntigravity) {
       try {
+        const config = loadMergedConfig();
+        const agModel = config.agent?.antigravityModel || 'flash';
         // 尝试调用 agentapi (Antigravity 独占)
-        const output = execSync(`agentapi new-conversation --model=flash "${prompt.replace(/(["$])/g, '\\$1')}"`, { encoding: 'utf8' });
+        const output = execSync(`agentapi new-conversation --model=${agModel} "${prompt.replace(/(["$])/g, '\\$1')}"`, { encoding: 'utf8' });
         const parsed = JSON.parse(output);
         const convId = parsed.response.newConversation.conversationId;
         

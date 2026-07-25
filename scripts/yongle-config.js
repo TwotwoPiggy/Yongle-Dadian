@@ -27,6 +27,7 @@ const globalConfigPath = path.join(homedir, '.yongle_knowledge', 'config.json');
  * @property {string} [apiKey] - 接口密钥
  * @property {string} [baseUrl] - 接口服务基准 URL
  * @property {string} [systemInstruction] - 系统级设定提示词
+ * @property {string} [antigravityModel] - Antigravity Subagent 模型 (例如 'flash' | 'inherit' | 'pro' | 'flash_lite')，未配置时默认为 'flash'
  */
 
 /**
