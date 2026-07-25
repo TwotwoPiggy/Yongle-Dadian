@@ -50,6 +50,9 @@ function getGlobalDir(runtime) {
     cursor: path.join(home, '.cursor'),
     windsurf: path.join(home, '.codeium', 'windsurf'),
     trae: path.join(home, '.trae'),
+    catpawai: path.join(home, '.catpawai'),
+    'trae-cn': path.join(home, '.trae-cn'),
+    qoder: path.join(home, '.qoder'),
   };
   return dirs[runtime] || path.join(home, '.' + runtime);
 }
@@ -282,7 +285,7 @@ function main() {
   // ──────────────────────────────────────────────────────────
   console.log(`  ${cyan}[4/4]${reset} ${bold}正在为运行中的 AI 代理重新注入技能...${reset}`);
   
-  const runtimes = ['antigravity', 'gemini', 'claude', 'opencode', 'kilo', 'cursor', 'windsurf', 'trae'];
+  const runtimes = ['antigravity', 'gemini', 'claude', 'opencode', 'kilo', 'cursor', 'windsurf', 'trae', 'catpawai', 'trae-cn', 'qoder'];
   let recheckCount = 0;
   
   for (const rt of runtimes) {
