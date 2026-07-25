@@ -236,6 +236,7 @@ const YONGLE_WORKFLOWS = [
 const YONGLE_SCRIPTS = [
   'yongle-db.js',
   'yongle-dreamer.js',
+  'yongle-auto-search-hook.js',
 ];
 
 function installForRuntime(runtime) {
@@ -304,6 +305,31 @@ function installForRuntime(runtime) {
   totalFiles++;
 
   console.log(`    ${green}✓${reset} ${totalFiles} files installed`);
+
+  // 5. Install Hook for Antigravity
+  if (runtime === 'antigravity') {
+    const hooksDir = hasGlobal ? path.join(os.homedir(), '.gemini', 'config') : path.join(process.cwd(), '.agent');
+    const hooksPath = path.join(hooksDir, 'hooks.json');
+    let hooksData = {};
+    if (fs.existsSync(hooksPath)) {
+      try { hooksData = JSON.parse(fs.readFileSync(hooksPath, 'utf8')); } catch(e) {}
+    }
+    
+    // Path to the installed hook script
+    const scriptPath = path.join(scriptsDir, 'yongle-auto-search-hook.js').replace(/\\/g, '/');
+    hooksData['yongle-autonomous'] = {
+      "PreInvocation": [
+        {
+          "type": "command",
+          "command": `node "${scriptPath}"`
+        }
+      ]
+    };
+    
+    fs.mkdirSync(hooksDir, { recursive: true });
+    fs.writeFileSync(hooksPath, JSON.stringify(hooksData, null, 2) + '\n', 'utf8');
+    console.log(`    ${green}✓${reset} Antigravity PreInvocation hook registered`);
+  }
 }
 
 function uninstallForRuntime(runtime) {
@@ -347,6 +373,22 @@ function uninstallForRuntime(runtime) {
   }
 
   console.log(`    ${green}✓${reset} ${removed} files removed`);
+
+  // Remove Hook for Antigravity
+  if (runtime === 'antigravity') {
+    const hooksDir = hasGlobal ? path.join(os.homedir(), '.gemini', 'config') : path.join(process.cwd(), '.agent');
+    const hooksPath = path.join(hooksDir, 'hooks.json');
+    if (fs.existsSync(hooksPath)) {
+      try {
+        let hooksData = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+        if (hooksData['yongle-autonomous']) {
+          delete hooksData['yongle-autonomous'];
+          fs.writeFileSync(hooksPath, JSON.stringify(hooksData, null, 2) + '\n', 'utf8');
+          console.log(`    ${green}✓${reset} Antigravity PreInvocation hook unregistered`);
+        }
+      } catch(e) {}
+    }
+  }
 }
 
 // ─── Execute ────────────────────────────────────────────
