@@ -98,7 +98,7 @@ function resolveTargetCommit(target) {
 function main() {
   console.log(banner);
 
-  const targetVersion = process.argv[2];
+  let targetVersion = process.argv[2];
 
   const isGit = fs.existsSync(path.join(packageRoot, '.git'));
   console.log(`  安装模式检测: ${bold}${isGit ? 'Git 仓库开发模式' : 'npm 全局包模式'}${reset}\n`);
@@ -141,29 +141,48 @@ function main() {
           latestInfo = `目标版本: "${targetVersion}" (${targetCommit.slice(0, 7)}) (当前 Commit: ${currentCommit.slice(0, 7)})`;
         }
       } else {
-        let branch = 'master';
+        console.log(`      ${cyan}▸${reset} 执行 git fetch --tags 拉取远程标签状态...`);
+        execSync('git fetch --tags origin', { cwd: packageRoot, stdio: 'ignore' });
+        
+        let latestTag = '';
         try {
-          branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          latestTag = execSync('git describe --tags $(git rev-list --tags --max-count=1)', { cwd: packageRoot, encoding: 'utf8' }).trim();
         } catch (e) {}
 
-        let count = 0;
-        try {
-          count = parseInt(execSync(`git rev-list HEAD..origin/${branch} --count`, { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-        } catch (err) {
+        if (latestTag) {
+          const targetCommit = resolveTargetCommit(latestTag);
+          const currentCommit = execSync('git rev-parse HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          
+          if (targetCommit && currentCommit !== targetCommit) {
+            hasUpdate = true;
+            latestInfo = `发现最新稳定版标签: "${latestTag}"`;
+            targetVersion = latestTag; // 劫持 targetVersion，让后续 [2/4] 阶段自动执行 checkout 逻辑
+          } else if (targetCommit) {
+            hasUpdate = false;
+            console.log(`    ${green}✓${reset} 当前已处于最新稳定版本 "${latestTag}"，无需更新。\n`);
+          }
+        } else {
+          // Fallback: 如果一个 tag 都没有，回退到追踪分支
+          let branch = 'master';
           try {
-            count = parseInt(execSync('git rev-list HEAD..origin/master --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-          } catch (e) {
+            branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          } catch (e) {}
+
+          let count = 0;
+          try {
+            count = parseInt(execSync(`git rev-list HEAD..origin/${branch} --count`, { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
+          } catch (err) {
             try {
-              count = parseInt(execSync('git rev-list HEAD..origin/main --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
-            } catch (e2) {
+              count = parseInt(execSync('git rev-list HEAD..origin/master --count', { cwd: packageRoot, encoding: 'utf8' }).trim(), 10);
+            } catch (e) {
               count = 0;
             }
           }
-        }
 
-        if (count > 0) {
-          hasUpdate = true;
-          latestInfo = `落后远程分支 ${count} 个 commit`;
+          if (count > 0) {
+            hasUpdate = true;
+            latestInfo = `落后远程分支 ${count} 个 commit`;
+          }
         }
       }
     } else {
