@@ -146,7 +146,10 @@ function main() {
         
         let latestTag = '';
         try {
-          latestTag = execSync('git describe --tags $(git rev-list --tags --max-count=1)', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          const latestCommit = execSync('git rev-list --tags --max-count=1', { cwd: packageRoot, encoding: 'utf8' }).trim();
+          if (latestCommit) {
+            latestTag = execSync(`git describe --tags ${latestCommit}`, { cwd: packageRoot, encoding: 'utf8' }).trim();
+          }
         } catch (e) {}
 
         if (latestTag) {
