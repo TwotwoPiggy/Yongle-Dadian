@@ -41,7 +41,8 @@
     "enabled": true,
     "provider": "gemini",
     "model": "gemini-3.1-flash-lite",
+    "antigravityModel": "flash",
     "apiKey": "YOUR_GEMINI_API_KEY",
-    "description": "对话 Agent 配置。若省略整个 agent 节点，系统将智能继承 embedding 中的密钥与提供商，Gemini 会自动匹配使用 gemini-1.5-flash 快速对话模型。"
+    "description": "对话 Agent 配置。antigravityModel 支持 'flash' (默认) | 'inherit' | 'pro' | 'flash_lite'。若省略整个 agent 节点，系统将智能继承 embedding 中的密钥与提供商。"
   }
 }

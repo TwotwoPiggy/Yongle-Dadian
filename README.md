@@ -102,27 +102,29 @@ graph TD
 
 ### 3. 安装与配置说明
 
-提供两种安装与配置途径：
+支持丰富的 AI Agent 宿主环境（例如 `--antigravity`, `--gemini`, `--claude`, `--cursor`, `--windsurf`, `--trae`, `--trae-cn`, `--catpawai`, `--qoder` 等）：
 
 #### 📦 途径 A：通过 npm 全局安装（推荐）
 ```powershell
 npx yongle-dadian --global --antigravity
+# 或针对其他运行时: npx yongle-dadian --global --trae-cn
 ```
 *这会自动将永乐大典注册到你的系统环境变量及宿主 Agent 工作流中。*
 
 #### 🔧 途径 B：本地源码安装（适合定制开发）
 1. 克隆仓库：
    ```powershell
-   git clone https://github.com/Lemony/yongle-dadian.git
-   cd yongle-dadian
+   git clone https://github.com/TwotwoPiggy/Yongle-Dadian.git
+   cd Yongle-Dadian
    ```
-2. 安装依赖：
+2. 安装依赖并注册本地全局软链接：
    ```powershell
    npm install
+   npm link
    ```
-3. 注册到全局：
+3. 注入技能到宿主 Agent：
    ```powershell
-   node bin/install.js --global --antigravity
+   yongle-dadian --global --antigravity
    ```
 
 #### 🔄 如何更新
@@ -133,7 +135,7 @@ npx yongle-dadian --global --antigravity
   ```markdown
   @[/yongle-update]
   ```
-  该命令会自动识别安装模式（npm 全局 / Git 源码克隆），拉取最新版本，执行必要的依赖更新，并自动对所有已激活的 AI 运行时重注入技能。
+  该命令会自动识别安装模式（npm 全局 / Git 源码克隆）。在 Git 源码模式下，将**优先自动追踪并签出远端最新发布的稳定里程碑 Tag**（确保环境极度稳定），同时执行必要的依赖更新并完成重注入。
 
 - **手动升级**：
   - **途径 A（npm 全局）**：直接再次运行 `npx` 即可拉取最新版：
@@ -142,8 +144,7 @@ npx yongle-dadian --global --antigravity
     ```
   - **途径 B（源码克隆）**：拉取最新代码并重新运行安装器：
     ```powershell
-    git pull
-    npm install
+    git fetch --tags
     node bin/install.js --global --antigravity
     ```
 
