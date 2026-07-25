@@ -133,10 +133,12 @@ ${data.solution}
       const filePath = path.join(dreamsDir, `auto-dream-${timestamp}.md`);
       fs.writeFileSync(filePath, markdownContent, 'utf8');
       
-      // 调用 yongle-db 入库
-      const dbScript = path.join(__dirname, 'yongle-db.js');
+      // 调用 yongle-embed-all.js 入库
+      const embedScript = path.join(__dirname, 'yongle-embed-all.js');
       try {
-        execSync(`node "${dbScript}" index "${filePath}"`);
+        if (fs.existsSync(embedScript)) {
+          execSync(`node "${embedScript}"`);
+        }
       } catch (e) {}
     }
 
