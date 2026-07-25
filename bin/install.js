@@ -52,6 +52,9 @@ const runtimeFlags = {
   cursor: args.includes('--cursor'),
   windsurf: args.includes('--windsurf'),
   trae: args.includes('--trae'),
+  catpawai: args.includes('--catpawai'),
+  'trae-cn': args.includes('--trae-cn'),
+  qoder: args.includes('--qoder'),
 };
 const hasAll = args.includes('--all');
 
@@ -79,6 +82,9 @@ if (hasHelp) {
   console.log(`    ${cyan}--cursor${reset}            Target Cursor runtime`);
   console.log(`    ${cyan}--windsurf${reset}          Target Windsurf runtime`);
   console.log(`    ${cyan}--trae${reset}              Target Trae runtime`);
+  console.log(`    ${cyan}--catpawai${reset}          Target CatpawAI runtime`);
+  console.log(`    ${cyan}--trae-cn${reset}           Target Trae (CN) runtime`);
+  console.log(`    ${cyan}--qoder${reset}             Target Qoder runtime`);
   console.log(`    ${cyan}--all${reset}               Install for all supported runtimes`);
   console.log(`    ${cyan}-u, --uninstall${reset}     Remove yongle files from target`);
   console.log(`    ${cyan}-h, --help${reset}          Show this help\n`);
@@ -116,6 +122,9 @@ function getGlobalDir(runtime) {
     cursor: path.join(home, '.cursor'),
     windsurf: path.join(home, '.codeium', 'windsurf'),
     trae: path.join(home, '.trae'),
+    catpawai: path.join(home, '.catpawai'),
+    'trae-cn': path.join(home, '.trae-cn'),
+    qoder: path.join(home, '.qoder'),
   };
   return dirs[runtime] || path.join(home, '.' + runtime);
 }
@@ -130,6 +139,9 @@ function getLocalDir(runtime) {
     cursor: '.cursor',
     windsurf: '.windsurf',
     trae: '.trae',
+    catpawai: '.catpawai',
+    'trae-cn': '.trae-cn',
+    qoder: '.qoder',
   };
   return path.join(process.cwd(), dirs[runtime] || '.' + runtime);
 }
