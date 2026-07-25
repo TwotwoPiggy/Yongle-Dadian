@@ -1,7 +1,11 @@
 {
   "name": "yongle-dadian",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "永乐大典 — AI 开发经验知识库引擎。自动复盘、过程追踪、毫秒级检索。独立于 GSD 运行。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TwotwoPiggy/Yongle-Dadian.git"
+  },
   "bin": {
     "yongle-dadian": "bin/install.js"
   },
