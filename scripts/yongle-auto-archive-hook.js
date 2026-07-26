@@ -11,12 +11,24 @@ process.stdin.on('end', () => {
   try {
     const payload = JSON.parse(inputData);
     
+    const repoModulesDir = 'D:/Computers/AIDevelop/Tools/Skills/yongle-dadian/node_modules';
+    const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
+    const combinedNodePath = [nodeModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+
+    // 无论是何种 Hook 事件，无条件触发梦境守护者 (Dreamer) 静默检查
+    const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
+    if (fs.existsSync(dreamerScript)) {
+      const dreamerChild = spawn('node', [dreamerScript, '--once'], {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
+      });
+      dreamerChild.unref();
+    }
+
     // 只要包含 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
-    if (payload.transcriptPath && payload.fullyIdle !== false) {
+    if (payload && payload.transcriptPath && payload.fullyIdle !== false) {
       const archiverScript = path.join(__dirname, 'yongle-bg-archiver.js');
-      const repoModulesDir = 'D:/Computers/AIDevelop/Tools/Skills/yongle-dadian/node_modules';
-      const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
-      const combinedNodePath = [nodeModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
       
       // 以 Detached (脱机) 模式启动后台归档进程，并切断 stdio 防止阻塞当前进程
       const child = spawn('node', [archiverScript, payload.transcriptPath], {
@@ -27,17 +39,6 @@ process.stdin.on('end', () => {
       
       child.unref(); // 让当前 Hook 脚本可以立刻退出
 
-      // 联动自动触发梦境守护者 (Dreamer) 静默检查
-      const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
-      if (fs.existsSync(dreamerScript)) {
-        const dreamerChild = spawn('node', [dreamerScript, '--once'], {
-          detached: true,
-          stdio: 'ignore',
-          env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
-        });
-        dreamerChild.unref();
-      }
-      
       const { logAutoFeature } = require('./yongle-logger');
       logAutoFeature({
         feature: 'auto-archive',
