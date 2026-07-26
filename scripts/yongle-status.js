@@ -92,7 +92,7 @@ function main() {
     },
     {
       id: 'dreamer',
-      name: '4. 梦境守护与整理 (Dreamer)',
+      name: '3. 梦境守护与整理 (Dreamer)',
       data: latestMap['dreamer']
     }
   ];
