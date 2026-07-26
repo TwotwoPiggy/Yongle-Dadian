@@ -381,7 +381,7 @@ function installForRuntime(runtime) {
         if (!agSettings.hooks.AfterTool) agSettings.hooks.AfterTool = [];
         
         const yongleEntry = {
-          matcher: ".*",
+          matcher: "*",
           hooks: [{
             type: "command",
             command: `& "D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
