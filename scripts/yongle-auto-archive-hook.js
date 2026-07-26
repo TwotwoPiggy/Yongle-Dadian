@@ -9,7 +9,14 @@ process.stdin.on('data', chunk => {
 
 process.stdin.on('end', () => {
   try {
-    const payload = JSON.parse(inputData);
+    try {
+      const logDir = 'C:/Users/Lemony/.yongle_knowledge/logs';
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+      fs.appendFileSync(path.join(logDir, 'hook_debug.log'), `${new Date().toISOString()} Input: ${inputData}\n`);
+    } catch (e) {}
+
+    let payload = {};
+    try { payload = JSON.parse(inputData); } catch (e) {}
     
     const repoModulesDir = 'D:/Computers/AIDevelop/Tools/Skills/yongle-dadian/node_modules';
     const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
