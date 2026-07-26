@@ -367,6 +367,34 @@ function installForRuntime(runtime) {
     fs.mkdirSync(hooksDir, { recursive: true });
     fs.writeFileSync(hooksPath, JSON.stringify(hooksData, null, 2) + '\n', 'utf8');
     console.log(`    ${green}✓${reset} Antigravity PreInvocation hook registered`);
+
+    // 5b. Also register to ~/.gemini/antigravity/settings.json AfterTool with wildcard matcher
+    const agSettingsPath = path.join(os.homedir(), '.gemini', 'antigravity', 'settings.json');
+    if (fs.existsSync(agSettingsPath)) {
+      try {
+        const agSettings = JSON.parse(fs.readFileSync(agSettingsPath, 'utf8'));
+        if (!agSettings.hooks) agSettings.hooks = {};
+        if (!agSettings.hooks.AfterTool) agSettings.hooks.AfterTool = [];
+        
+        const exists = agSettings.hooks.AfterTool.some(entry => 
+          entry.hooks && entry.hooks.some(h => h.command && h.command.includes('yongle-auto-archive-hook.js'))
+        );
+        if (!exists) {
+          agSettings.hooks.AfterTool.push({
+            matcher: ".*",
+            hooks: [
+              {
+                type: "command",
+                command: `"D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
+                timeout: 10
+              }
+            ]
+          });
+          fs.writeFileSync(agSettingsPath, JSON.stringify(agSettings, null, 2) + '\n', 'utf8');
+          console.log(`    ${green}✓${reset} Antigravity settings.json AfterTool hook registered`);
+        }
+      } catch(e) {}
+    }
   }
 }
 
