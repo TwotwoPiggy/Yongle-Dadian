@@ -368,9 +368,13 @@ function installForRuntime(runtime) {
     fs.writeFileSync(hooksPath, JSON.stringify(hooksData, null, 2) + '\n', 'utf8');
     console.log(`    ${green}✓${reset} Antigravity PreInvocation hook registered`);
 
-    // 5b. Also register to ~/.gemini/antigravity/settings.json AfterTool with wildcard matcher
-    const agSettingsPath = path.join(os.homedir(), '.gemini', 'antigravity', 'settings.json');
-    if (fs.existsSync(agSettingsPath)) {
+    // 5b. Register to ~/.gemini/settings.json AND ~/.gemini/antigravity/settings.json AfterTool
+    const settingsPaths = [
+      path.join(os.homedir(), '.gemini', 'settings.json'),
+      path.join(os.homedir(), '.gemini', 'antigravity', 'settings.json')
+    ];
+    for (const agSettingsPath of settingsPaths) {
+      if (!fs.existsSync(agSettingsPath)) continue;
       try {
         const agSettings = JSON.parse(fs.readFileSync(agSettingsPath, 'utf8'));
         if (!agSettings.hooks) agSettings.hooks = {};
@@ -378,7 +382,7 @@ function installForRuntime(runtime) {
         
         const targetHook = {
           type: "command",
-          command: `"D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
+          command: `& "D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
           timeout: 10
         };
 
@@ -393,7 +397,7 @@ function installForRuntime(runtime) {
         if (!exists) {
           entry.hooks.push(targetHook);
           fs.writeFileSync(agSettingsPath, JSON.stringify(agSettings, null, 2) + '\n', 'utf8');
-          console.log(`    ${green}✓${reset} Antigravity settings.json AfterTool hook registered`);
+          console.log(`    ${green}✓${reset} ${path.basename(path.dirname(agSettingsPath))}/settings.json AfterTool hook registered`);
         }
       } catch(e) {}
     }
