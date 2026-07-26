@@ -26,12 +26,17 @@ process.stdin.on('end', () => {
       dreamerChild.unref();
     }
 
-    // 只要包含 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
-    if (payload && payload.transcriptPath && payload.fullyIdle !== false) {
+    // 兼容 transcript_path (蛇形), transcriptPath (驼峰) 以及从 session_id 自动推导
+    const transcriptPath = payload.transcript_path 
+      || payload.transcriptPath 
+      || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null);
+
+    // 只要能推导出存在的 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
+    if (transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false) {
       const archiverScript = path.join(__dirname, 'yongle-bg-archiver.js');
       
       // 以 Detached (脱机) 模式启动后台归档进程，并切断 stdio 防止阻塞当前进程
-      const child = spawn('node', [archiverScript, payload.transcriptPath], {
+      const child = spawn('node', [archiverScript, transcriptPath], {
         detached: true,
         stdio: 'ignore',
         env: { ...process.env, YONGLE_RUNTIME: 'antigravity', NODE_PATH: combinedNodePath }
