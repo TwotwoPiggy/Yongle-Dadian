@@ -380,22 +380,21 @@ function installForRuntime(runtime) {
         if (!agSettings.hooks) agSettings.hooks = {};
         if (!agSettings.hooks.AfterTool) agSettings.hooks.AfterTool = [];
         
-        const targetHook = {
-          type: "command",
-          command: `& "D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
-          timeout: 10
+        const yongleEntry = {
+          matcher: ".*",
+          hooks: [{
+            type: "command",
+            command: `& "D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
+            timeout: 10
+          }]
         };
 
-        let entry = agSettings.hooks.AfterTool.find(e => e.hooks);
-        if (!entry) {
-          entry = { matcher: ".*", hooks: [] };
-          agSettings.hooks.AfterTool.push(entry);
-        }
-        entry.matcher = ".*";
-
-        const exists = entry.hooks.some(h => h.command && h.command.includes('yongle-auto-archive-hook.js'));
+        // Check if our hook already exists in ANY entry
+        const exists = agSettings.hooks.AfterTool.some(entry =>
+          entry.hooks && entry.hooks.some(h => h.command && h.command.includes('yongle-auto-archive-hook.js'))
+        );
         if (!exists) {
-          entry.hooks.push(targetHook);
+          agSettings.hooks.AfterTool.push(yongleEntry);
           fs.writeFileSync(agSettingsPath, JSON.stringify(agSettings, null, 2) + '\n', 'utf8');
           console.log(`    ${green}✓${reset} ${path.basename(path.dirname(agSettingsPath))}/settings.json AfterTool hook registered`);
         }
