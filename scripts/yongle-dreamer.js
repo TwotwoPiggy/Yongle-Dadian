@@ -8,6 +8,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { getAgentCompletion } = require('./yongle-agent-api.js');
 const { loadMergedConfig } = require('./yongle-config');
+const { logAutoFeature } = require('./yongle-logger');
 
 // 配置 (可从 config.json 读取，此处为默认值)
 const CONFIG = {
@@ -161,6 +162,11 @@ ${summary.trim()}
   }
   
   console.log(`[${timestamp}] ✅ ${type === 'quick' ? '梦境片段已缓存' : '梦境合并已排期'}`);
+  logAutoFeature({
+    feature: 'dreamer',
+    status: 'SUCCESS',
+    details: `完成 ${type === 'quick' ? '快速梦' : '长梦'} 整理沉淀`
+  });
 }
 
 const STATE_FILE = '.planning/yongle/dream_state.json';
@@ -210,6 +216,11 @@ async function runOnce() {
     const minToQuick = Math.max(0, Math.ceil((CONFIG.QUICK_IDLE_MS - fileSilence) / (60 * 1000)));
     const minToLong = Math.max(0, Math.ceil((CONFIG.LONG_IDLE_MS - fileSilence) / (60 * 1000)));
     console.log(`当前项目静默时长: ${Math.round(fileSilence / 1000)}s。暂未达到梦境触发阈值（距离快速梦还需 ${minToQuick}m，距离长梦还需 ${minToLong}m）。`);
+    logAutoFeature({
+      feature: 'dreamer',
+      status: 'MISS',
+      details: `守护检查：未达阈值（静默 ${Math.round(fileSilence / 1000)}s）`
+    });
   }
 }
 

@@ -41,6 +41,12 @@ const hasGlobal = args.includes('--global') || args.includes('-g');
 const hasLocal = args.includes('--local') || args.includes('-l');
 const hasUninstall = args.includes('--uninstall') || args.includes('-u');
 const hasHelp = args.includes('--help') || args.includes('-h');
+const hasStatus = args.includes('--status') || args.includes('-s');
+
+if (hasStatus) {
+  require('../scripts/yongle-status.js');
+  process.exit(0);
+}
 
 // Runtime flags
 const runtimeFlags = {
@@ -87,6 +93,7 @@ if (hasHelp) {
   console.log(`    ${cyan}--qoder${reset}             Target Qoder runtime`);
   console.log(`    ${cyan}--all${reset}               Install for all supported runtimes`);
   console.log(`    ${cyan}-u, --uninstall${reset}     Remove yongle files from target`);
+  console.log(`    ${cyan}-s, --status${reset}        Show auto-features health dashboard`);
   console.log(`    ${cyan}-h, --help${reset}          Show this help\n`);
   console.log(`  ${yellow}Examples:${reset}`);
   console.log(`    ${dim}# Install for Antigravity globally${reset}`);

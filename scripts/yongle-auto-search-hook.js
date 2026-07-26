@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { spawnSync } = require('child_process');
+const { logAutoFeature } = require('./yongle-logger');
 
 let inputData = '';
 process.stdin.on('data', chunk => {
@@ -14,6 +15,7 @@ process.stdin.on('end', () => {
       console.log(JSON.stringify({}));
       process.exit(0);
     }
+    const startTime = Date.now();
     
     // 读取 transcript
     const transcript = fs.readFileSync(payload.transcriptPath, 'utf8');
@@ -76,6 +78,13 @@ process.stdin.on('end', () => {
     
     // 如果找到了结果（通过判定是否包含结果专属的 emoji 前缀）
     if (cleanOutput && (cleanOutput.includes('🧠') || cleanOutput.includes('🔍')) && !cleanOutput.includes('Semantic Error')) {
+      const durationMs = Date.now() - startTime;
+      logAutoFeature({
+        feature: 'auto-search',
+        status: 'HIT',
+        durationMs,
+        details: `匹配到关联经验 (${queryContext})`
+      });
       console.log(JSON.stringify({
         injectSteps: [
           {
@@ -86,9 +95,22 @@ process.stdin.on('end', () => {
       process.exit(0);
     }
     
+    logAutoFeature({
+      feature: 'auto-search',
+      status: 'MISS',
+      durationMs: Date.now() - startTime,
+      details: `未匹配到明显相关排错经验 (${queryContext || 'NoQuery'})`
+    });
+
     console.log(JSON.stringify({}));
     process.exit(0);
   } catch (err) {
+    logAutoFeature({
+      feature: 'auto-search',
+      status: 'ERROR',
+      durationMs: 0,
+      error: err.message
+    });
     console.log(JSON.stringify({}));
     process.exit(0);
   }

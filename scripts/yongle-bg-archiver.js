@@ -3,6 +3,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { getAgentCompletion } = require('./yongle-agent-api.js');
 const { loadMergedConfig } = require('./yongle-config.js');
+const { logAutoFeature } = require('./yongle-logger.js');
 const os = require('os');
 
 // 获取日志路径
@@ -15,6 +16,7 @@ if (!transcriptPath || !fs.existsSync(transcriptPath)) {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
+  const startTime = Date.now();
   try {
     // 1. 读取并提取上下文 (最近 40 条记录)
     const lines = fs.readFileSync(transcriptPath, 'utf8').trim().split('\n').slice(-40);
@@ -143,10 +145,22 @@ ${data.solution}
           execSync(`node "${embedScript}"`);
         }
       } catch (e) {}
+
+      logAutoFeature({
+        feature: 'auto-archive',
+        status: 'SUCCESS',
+        durationMs: Date.now() - startTime,
+        details: `归档生成经验: "${data.title}" (${usedAgentApi ? 'Native AgentAPI' : 'External LLM API'})`
+      });
     }
 
   } catch (error) {
-    // 任何异常都静默吞掉，绝不影响主线程
+    logAutoFeature({
+      feature: 'auto-archive',
+      status: 'ERROR',
+      durationMs: Date.now() - startTime,
+      error: error.message
+    });
   }
 }
 

@@ -23,6 +23,13 @@ process.stdin.on('end', () => {
       });
       
       child.unref(); // 让当前 Hook 脚本可以立刻退出
+      
+      const { logAutoFeature } = require('./yongle-logger');
+      logAutoFeature({
+        feature: 'auto-archive',
+        status: 'RUNNING',
+        details: '已触发脱机后台归档进程'
+      });
     }
     
     // Stop 钩子一般不需要返回任何操作（直接输出空或原样放行）
