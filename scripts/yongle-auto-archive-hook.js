@@ -33,10 +33,32 @@ process.stdin.on('end', () => {
       dreamerChild.unref();
     }
 
-    // 兼容 transcript_path (蛇形), transcriptPath (驼峰) 以及从 session_id 自动推导
+    function getLatestTranscriptPath() {
+      try {
+        const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
+        if (!fs.existsSync(brainDir)) return null;
+        const sessions = fs.readdirSync(brainDir);
+        let latestPath = null;
+        let latestMtime = 0;
+        for (const sid of sessions) {
+          const logFile = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
+          if (fs.existsSync(logFile)) {
+            const mtime = fs.statSync(logFile).mtimeMs;
+            if (mtime > latestMtime) {
+              latestMtime = mtime;
+              latestPath = logFile;
+            }
+          }
+        }
+        return latestPath;
+      } catch (e) { return null; }
+    }
+
+    // 兼容 transcript_path (蛇形), transcriptPath (驼峰), session_id 推导, 以及自动扫描最新日志保底
     const transcriptPath = payload.transcript_path 
       || payload.transcriptPath 
-      || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null);
+      || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null)
+      || getLatestTranscriptPath();
 
     // 只要能推导出存在的 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
     if (transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false) {
