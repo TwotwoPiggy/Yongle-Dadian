@@ -376,20 +376,22 @@ function installForRuntime(runtime) {
         if (!agSettings.hooks) agSettings.hooks = {};
         if (!agSettings.hooks.AfterTool) agSettings.hooks.AfterTool = [];
         
-        const exists = agSettings.hooks.AfterTool.some(entry => 
-          entry.hooks && entry.hooks.some(h => h.command && h.command.includes('yongle-auto-archive-hook.js'))
-        );
+        const targetHook = {
+          type: "command",
+          command: `"D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
+          timeout: 10
+        };
+
+        let entry = agSettings.hooks.AfterTool.find(e => e.hooks);
+        if (!entry) {
+          entry = { matcher: ".*", hooks: [] };
+          agSettings.hooks.AfterTool.push(entry);
+        }
+        entry.matcher = ".*";
+
+        const exists = entry.hooks.some(h => h.command && h.command.includes('yongle-auto-archive-hook.js'));
         if (!exists) {
-          agSettings.hooks.AfterTool.push({
-            matcher: ".*",
-            hooks: [
-              {
-                type: "command",
-                command: `"D:/Computers/Environments/Nodejs/node.exe" "${archiveScriptPath}"`,
-                timeout: 10
-              }
-            ]
-          });
+          entry.hooks.push(targetHook);
           fs.writeFileSync(agSettingsPath, JSON.stringify(agSettings, null, 2) + '\n', 'utf8');
           console.log(`    ${green}✓${reset} Antigravity settings.json AfterTool hook registered`);
         }
