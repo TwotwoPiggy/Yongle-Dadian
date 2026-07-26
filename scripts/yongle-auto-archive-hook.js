@@ -26,6 +26,17 @@ process.stdin.on('end', () => {
       });
       
       child.unref(); // 让当前 Hook 脚本可以立刻退出
+
+      // 联动自动触发梦境守护者 (Dreamer) 静默检查
+      const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
+      if (fs.existsSync(dreamerScript)) {
+        const dreamerChild = spawn('node', [dreamerScript, '--once'], {
+          detached: true,
+          stdio: 'ignore',
+          env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
+        });
+        dreamerChild.unref();
+      }
       
       const { logAutoFeature } = require('./yongle-logger');
       logAutoFeature({
