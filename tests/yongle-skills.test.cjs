@@ -17,6 +17,9 @@ const EXPECTED_SKILLS = [
   'yongle-reindex',
   'yongle-sync',
   'yongle-update',
+  'yongle-config-export',
+  'yongle-config-import',
+  'yongle-status',
 ];
 
 describe('yongle skills structure', () => {

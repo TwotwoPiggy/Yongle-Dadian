@@ -240,6 +240,7 @@ const YONGLE_SKILLS = [
   'yongle-update',
   'yongle-config-export',
   'yongle-config-import',
+  'yongle-status',
 ];
 
 const YONGLE_WORKFLOWS = [
@@ -258,6 +259,8 @@ const YONGLE_SCRIPTS = [
   'yongle-auto-search-hook.js',
   'yongle-auto-archive-hook.js',
   'yongle-bg-archiver.js',
+  'yongle-logger.js',
+  'yongle-status.js',
 ];
 
 function installForRuntime(runtime) {
