@@ -50,6 +50,8 @@ function formatStatus(status) {
       return `${cyan}${bold}🔄 后台运行中${reset}`;
     case 'MISS':
       return `${dim}💬 未触发/放行${reset}`;
+    case 'SKIPPED':
+      return `${green}🔍 审查完成 (无新Bug)${reset}`;
     case 'ERROR':
       return `${red}${bold}✗ 执行报错${reset}`;
     default:

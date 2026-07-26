@@ -11,15 +11,18 @@ process.stdin.on('end', () => {
   try {
     const payload = JSON.parse(inputData);
     
-    // 只有当所有后台任务结束且 Agent 完全空闲时才触发归档
-    if (payload.fullyIdle && payload.transcriptPath) {
+    // 只要包含 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
+    if (payload.transcriptPath && payload.fullyIdle !== false) {
       const archiverScript = path.join(__dirname, 'yongle-bg-archiver.js');
+      const repoModulesDir = 'D:/Computers/AIDevelop/Tools/Skills/yongle-dadian/node_modules';
+      const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
+      const combinedNodePath = [nodeModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
       
       // 以 Detached (脱机) 模式启动后台归档进程，并切断 stdio 防止阻塞当前进程
       const child = spawn('node', [archiverScript, payload.transcriptPath], {
         detached: true,
         stdio: 'ignore',
-        env: { ...process.env, YONGLE_RUNTIME: 'antigravity' }
+        env: { ...process.env, YONGLE_RUNTIME: 'antigravity', NODE_PATH: combinedNodePath }
       });
       
       child.unref(); // 让当前 Hook 脚本可以立刻退出

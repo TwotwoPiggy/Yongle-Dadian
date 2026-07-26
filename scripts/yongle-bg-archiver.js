@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const { getAgentCompletion } = require('./yongle-agent-api.js');
 const { loadMergedConfig } = require('./yongle-config.js');
 const { logAutoFeature } = require('./yongle-logger.js');
@@ -60,10 +60,10 @@ ${context}`;
       try {
         const config = loadMergedConfig();
         const agModel = config.agent?.antigravityModel || 'flash';
-        // 尝试调用 agentapi (Antigravity 独占)
-        const output = execSync(`agentapi new-conversation --model=${agModel} "${prompt.replace(/(["$])/g, '\\$1')}"`, { encoding: 'utf8' });
+        // 尝试调用 agentapi (使用 execFileSync 传递数组参数，防 Windows 命令行转义异常)
+        const output = execFileSync('agentapi', ['new-conversation', `--model=${agModel}`, prompt], { encoding: 'utf8' });
         const parsed = JSON.parse(output);
-        const convId = parsed.response.newConversation.conversationId;
+        const convId = parsed.response?.newConversation?.conversationId;
         
         if (convId) {
           usedAgentApi = true;
@@ -95,15 +95,28 @@ ${context}`;
 
     // 降级使用 yongle-agent-api.js (外部大模型 API)
     if (!resultJsonStr) {
-      resultJsonStr = await getAgentCompletion(prompt, '你是一个专门用来提取 JSON 格式的技术经验复盘专家。请只输出 JSON。');
+      try {
+        resultJsonStr = await getAgentCompletion(prompt, '你是一个专门用来提取 JSON 格式的技术经验复盘专家。请只输出 JSON。');
+      } catch (e) {}
     }
 
-    if (!resultJsonStr) process.exit(0);
+    if (!resultJsonStr) {
+      logAutoFeature({
+        feature: 'auto-archive',
+        status: 'SKIPPED',
+        durationMs: Date.now() - startTime,
+        details: '会话审查结束，模型未返回有效评估结果'
+      });
+      return;
+    }
 
     // 3. 解析与归档
     // 清理 markdown codeblock 标记
     const cleanJsonStr = resultJsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const data = JSON.parse(cleanJsonStr);
+    let data = {};
+    try {
+      data = JSON.parse(cleanJsonStr);
+    } catch(e) {}
 
     if (data.solved === true && data.title) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -151,6 +164,13 @@ ${data.solution}
         status: 'SUCCESS',
         durationMs: Date.now() - startTime,
         details: `归档生成经验: "${data.title}" (${usedAgentApi ? 'Native AgentAPI' : 'External LLM API'})`
+      });
+    } else {
+      logAutoFeature({
+        feature: 'auto-archive',
+        status: 'SKIPPED',
+        durationMs: Date.now() - startTime,
+        details: '会话审查完毕，未发现需归档的新 Bug 解决经验'
       });
     }
 

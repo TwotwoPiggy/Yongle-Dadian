@@ -350,6 +350,12 @@ function installForRuntime(runtime) {
           "command": `node "${searchScriptPath}"`
         }
       ],
+      "PostInvocation": [
+        {
+          "type": "command",
+          "command": `node "${archiveScriptPath}"`
+        }
+      ],
       "Stop": [
         {
           "type": "command",
