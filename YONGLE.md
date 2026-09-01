@@ -119,10 +119,16 @@
 | `default_limit` | `5` | `1` ~ `20` | `/yongle-search` 默认返回的结果条数。 |
 | `semantic_threshold` | `0.7` | `0.0` ~ `1.0` | (预留) 语义搜索的相关度阈值。目前主要用于过滤极低相关度的模糊匹配。 |
 
-#### `yongle.storage` (存储配置)
+#### `yongle.storage` (存储配置 — 三级知识库)
+
 | 字段 | 默认值 | 可选值 | 说明 |
 | :--- | :--- | :--- | :--- |
-| `global_path` | `null` | 绝对路径 | 自定义全局知识库的存储位置。默认为家目录下的 `.yongle_knowledge/`。 |
+| `user_path` | `~/.yongle_knowledge/` | 绝对路径 | **用户级**知识库位置(个人跨项目经验)。也可用环境变量 `YONGLE_HOME` 覆盖。 |
+| `global_path` | `null` | 绝对路径 | **全局级(团队共享)**知识库位置。未配置时 `global` 级别禁用(检索自动跳过,记录报错)。也可用环境变量 `YONGLE_GLOBAL_HOME` 覆盖。 |
+
+**三级体系**:`project`(项目级,`<workspace>/.planning/yongle/`)→ `user`(用户级)→ `global`(团队级)。
+- 检索:`auto` 级别按 project → user → global 合并检索(自动跳过未配置级别)。
+- 记录:必须显式指定级别(如 `--level project|user|global`)。
 
 #### `embedding` (向量提取配置)
 | 字段 | 默认值 | 可选值 | 说明 |

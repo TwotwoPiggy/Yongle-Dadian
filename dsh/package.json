@@ -1,0 +1,45 @@
+{
+  "name": "yongle-dadian-dsh",
+  "version": "0.2.0",
+  "description": "永乐大典 DeepSeek Harness 原生插件:三级知识库混合检索、复盘蒸馏、人类命令、Web 状态挂件(Token 优化版)",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "client",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "prepare": "node scripts/sync-core.mjs",
+    "sync-core": "node scripts/sync-core.mjs",
+    "pack": "pnpm pack"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "axios": "^1.16.1",
+    "https-proxy-agent": "^5.0.1",
+    "vectordb": "^0.21.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "license": "MIT"
+}

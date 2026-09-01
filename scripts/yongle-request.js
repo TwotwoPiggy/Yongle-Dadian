@@ -91,6 +91,10 @@ async function yongleFetch(url, options = {}) {
       axiosOpts.data = options.body;
     }
 
+    if (options.signal) {
+      axiosOpts.signal = options.signal;
+    }
+
     const response = await client.request(axiosOpts);
 
     // 将 Axios 响应适配为类似原生 fetch 的 Response 接口

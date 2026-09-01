@@ -27,6 +27,7 @@
   - [4. 快速上手指南](#4-快速上手指南)
   - [5. 详细命令手册](#5-详细命令手册)
   - [6. 与交付框架 GSD (Get Shit Done) 协同工作](#6-与交付框架-gsd-get-shit-done-协同工作)
+  - [7. DeepSeek Harness 原生集成(插件)](#7-deepseek-harness-原生集成插件)
 - [🇬🇧 Yongle Dadian — AI Agent Long-term Memory & Hybrid Search Engine](#-yongle-dadian--ai-agent-long-term-memory--hybrid-search-engine-1)
   - [🗺️ Table of Contents](#️-table-of-contents)
   - [1. Core Value & Scenarios](#1-core-value--scenarios)
@@ -338,6 +339,29 @@ npx yongle-dadian --global --antigravity
 
 #### 🔗 GitHub 协同项目
 - [Get Shit Done (GSD) Harness Framework](https://github.com/gsd-build/get-shit-done) (提供精密的 AI 阶段规范管控、Nyquist 验证审计与自动化测试流)。
+
+---
+
+### 7. DeepSeek Harness 原生集成(插件)
+
+永乐大典以 **原生插件** 形态接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness):
+模型可直接调用知识库检索、记录与复盘蒸馏,人类侧有 `/yongle-*` 命令。
+
+```sh
+# 从 tarball 安装(或发布后: dsh plugin --profile web add yongle-dadian-dsh)
+cd dsh && pnpm pack
+dsh plugin --profile web add ./yongle-dadian-dsh-*.tgz
+dsh --profile web --dump-config   # 确认出现 "# == yongle-dadian-dsh" 层
+dsh --profile web
+```
+
+**能力**:`yongle_search` / `yongle_recall` / `yongle_remember` / `yongle_status` 工具;
+`/yongle-search` `/yongle-record` `/yongle-postmortem` `/yongle-confirm` `/yongle-repair`
+`/yongle-reindex` `/yongle-status` 命令。三级知识库(项目级/用户级/全局级),检索与
+记录均可区分级别;复盘蒸馏直接从 DSH 会话日志提取素材(固定系统模板,DeepSeek
+前缀缓存友好)。
+
+详见 [`dsh/README.md`](dsh/README.md) 与 [`docs/永乐大典-DeepSeek-Harness-集成方案.md`](docs/永乐大典-DeepSeek-Harness-集成方案.md)。
 
 ---
 

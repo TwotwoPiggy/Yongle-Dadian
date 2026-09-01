@@ -1,0 +1,5 @@
+# 永乐大典 × DeepSeek Harness 组合包层
+# 安装: dsh plugin --profile <name> add ./dsh(或发布后 dsh plugin --profile <name> add yongle-dadian-dsh)
+- insert:
+    - id: yongle
+      name: yongle-dadian-dsh
