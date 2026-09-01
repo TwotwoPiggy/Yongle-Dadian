@@ -31,3 +31,4 @@ Thumbs.db
 *.cache
 test-*.json
 scratch/
+*.tgz

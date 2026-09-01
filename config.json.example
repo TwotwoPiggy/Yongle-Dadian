@@ -11,6 +11,10 @@
     "search": {
       "default_limit": 5
     },
+    "storage": {
+      "user_path": "C:\\Users\\you\\.yongle_knowledge",
+      "global_path": "D:\\team-knowledge"
+    },
     "scheduler": {
       "sync": {
         "enabled": true,
