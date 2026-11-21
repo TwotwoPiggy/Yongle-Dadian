@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 function runEmbedScript(scope, filepath) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, 'yongle-embed.js');
-    const child = spawn('node', [scriptPath, scope, filepath]);
+    const child = spawn(process.execPath, [scriptPath, scope, filepath], { windowsHide: true });
 
     let output = '';
     let error = '';

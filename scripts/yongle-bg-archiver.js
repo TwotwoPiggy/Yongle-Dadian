@@ -60,8 +60,8 @@ ${context}`;
       try {
         const config = loadMergedConfig();
         const agModel = config.agent?.antigravityModel || 'flash';
-        // 尝试调用 agentapi (使用 execFileSync 传递数组参数，防 Windows 命令行转义异常)
-        const output = execFileSync('agentapi', ['new-conversation', `--model=${agModel}`, prompt], { encoding: 'utf8' });
+        // 尝试调用 agentapi (使用 execFileSync 传递数组参数，防 Windows 命令行转义异常与弹窗)
+        const output = execFileSync('agentapi', ['new-conversation', `--model=${agModel}`, prompt], { encoding: 'utf8', windowsHide: true });
         const parsed = JSON.parse(output);
         const convId = parsed.response?.newConversation?.conversationId;
         
@@ -151,11 +151,14 @@ ${data.solution}
       const filePath = path.join(dreamsDir, `auto-dream-${timestamp}.md`);
       fs.writeFileSync(filePath, markdownContent, 'utf8');
       
-      // 调用 yongle-embed-all.js 入库
-      const embedScript = path.join(__dirname, 'yongle-embed-all.js');
+      // 仅对当前新增归档文件执行单文件向量化入库，并使用 execFileSync + windowsHide 防止弹出 cmd 窗口
+      const embedSingleScript = path.join(__dirname, 'yongle-embed.js');
       try {
-        if (fs.existsSync(embedScript)) {
-          execSync(`node "${embedScript}"`);
+        if (fs.existsSync(embedSingleScript)) {
+          execFileSync(process.execPath, [embedSingleScript, 'local', filePath], {
+            windowsHide: true,
+            stdio: 'ignore'
+          });
         }
       } catch (e) {}
 

@@ -70,7 +70,7 @@ process.stdin.on('end', () => {
       query = query.substring(0, 250) + ' ... ' + query.substring(query.length - 250);
     }
     
-    const child = spawnSync('node', [scriptPath, 'global', query], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const child = spawnSync(process.execPath, [scriptPath, 'global', query], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
     const output = child.stdout || '';
     
     // 清洗 ANSI 色彩字符
