@@ -67,8 +67,8 @@ describe('yongle-dadian installer', () => {
       'yongle-postmortem SKILL.md should exist');
     assert.ok(fs.existsSync(path.join(skillsDir, 'yongle-search', 'SKILL.md')),
       'yongle-search SKILL.md should exist');
-    assert.ok(fs.existsSync(path.join(skillsDir, 'yongle-update', 'SKILL.md')),
-      'yongle-update SKILL.md should exist');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'yongle-manage', 'SKILL.md')),
+      'yongle-manage SKILL.md should exist');
 
     // Check manifest
     const manifestPath = path.join(tmpDir, '.gemini', 'antigravity', 'yongle', 'install-manifest.json');

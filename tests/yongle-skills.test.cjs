@@ -9,18 +9,9 @@ const ROOT = path.resolve(__dirname, '..');
 const SKILLS_DIR = path.join(ROOT, 'skills');
 
 const EXPECTED_SKILLS = [
-  'yongle-postmortem',
-  'yongle-confirm',
   'yongle-search',
-  'yongle-recall',
-  'yongle-tag',
-  'yongle-reindex',
-  'yongle-sync',
-  'yongle-update',
-  'yongle-config-export',
-  'yongle-config-import',
-  'yongle-status',
-  'yongle-lint',
+  'yongle-postmortem',
+  'yongle-manage',
 ];
 
 describe('yongle skills structure', () => {

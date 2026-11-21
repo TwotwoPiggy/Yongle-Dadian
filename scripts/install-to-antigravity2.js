@@ -30,21 +30,21 @@ fs.writeFileSync(
 );
 console.log('✓ Created plugin.json');
 
-// 3. Install skills and resolve paths
+// 3. Install skills and resolve paths (clean up deprecated skills first)
 const YONGLE_SKILLS = [
-  'yongle-postmortem',
-  'yongle-confirm',
   'yongle-search',
-  'yongle-recall',
-  'yongle-tag',
-  'yongle-reindex',
-  'yongle-sync',
-  'yongle-update',
-  'yongle-config-export',
-  'yongle-config-import',
-  'yongle-status',
-  'yongle-lint',
+  'yongle-postmortem',
+  'yongle-manage',
 ];
+
+if (fs.existsSync(targetSkillsDir)) {
+  for (const entry of fs.readdirSync(targetSkillsDir)) {
+    if (!YONGLE_SKILLS.includes(entry)) {
+      fs.rmSync(path.join(targetSkillsDir, entry), { recursive: true, force: true });
+      console.log(`- Removed deprecated skill: ${entry}`);
+    }
+  }
+}
 
 const normalizedPackageRoot = packageRoot.replace(/\\/g, '/');
 

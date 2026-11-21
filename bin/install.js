@@ -230,13 +230,18 @@ function getScriptsDir(configDir) {
 
 // Yongle skill names
 const YONGLE_SKILLS = [
-  'yongle-postmortem',
-  'yongle-confirm',
   'yongle-search',
+  'yongle-postmortem',
+  'yongle-manage',
+];
+
+const LEGACY_SKILLS = [
+  'yongle-confirm',
   'yongle-recall',
   'yongle-tag',
   'yongle-reindex',
   'yongle-sync',
+  'yongle-sync-config',
   'yongle-update',
   'yongle-config-export',
   'yongle-config-import',
@@ -273,8 +278,11 @@ function installForRuntime(runtime) {
 
   let totalFiles = 0;
 
-  // 1. Install skills
+  // 1. Install skills (and clean up legacy skills)
   const skillsDir = getSkillsDir(configDir);
+  for (const legacyName of LEGACY_SKILLS) {
+    removeDir(path.join(skillsDir, legacyName));
+  }
   for (const skillName of YONGLE_SKILLS) {
     const src = path.join(srcSkills, skillName);
     const dest = path.join(skillsDir, skillName);
@@ -413,9 +421,9 @@ function uninstallForRuntime(runtime) {
 
   let removed = 0;
 
-  // Remove skills
+  // Remove skills (including any legacy skills)
   const skillsDir = getSkillsDir(configDir);
-  for (const skillName of YONGLE_SKILLS) {
+  for (const skillName of [...YONGLE_SKILLS, ...LEGACY_SKILLS]) {
     const dir = path.join(skillsDir, skillName);
     removed += removeDir(dir);
   }
