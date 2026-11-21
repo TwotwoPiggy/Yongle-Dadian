@@ -122,9 +122,29 @@ function loadMergedConfig() {
   return /** @type {YongleConfig} */ (mergedConfig);
 }
 
+/**
+ * 保存全局配置至 ~/.yongle_knowledge/config.json
+ * @param {YongleConfig} config - 欲保存的完整或局部配置
+ */
+function saveGlobalConfig(config) {
+  let existing = {};
+  if (fs.existsSync(globalConfigPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(globalConfigPath, 'utf8'));
+    } catch {}
+  }
+  const merged = deepMerge(existing, config);
+  const dir = path.dirname(globalConfigPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(globalConfigPath, JSON.stringify(merged, null, 2), 'utf8');
+  return merged;
+}
+
 module.exports = {
   loadMergedConfig,
+  saveGlobalConfig,
   globalConfigPath,
   deepMerge,
   findNearestFile
 };
+

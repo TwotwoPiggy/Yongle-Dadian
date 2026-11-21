@@ -68,6 +68,21 @@ function migrate(db) {
   if (!cols.includes('body_index')) {
     db.exec("ALTER TABLE entries ADD COLUMN body_index TEXT DEFAULT ''");
   }
+  if (!cols.includes('status')) {
+    db.exec("ALTER TABLE entries ADD COLUMN status TEXT DEFAULT 'active'");
+  }
+  if (!cols.includes('superseded_by')) {
+    db.exec("ALTER TABLE entries ADD COLUMN superseded_by TEXT DEFAULT ''");
+  }
+  if (!cols.includes('supersedes')) {
+    db.exec("ALTER TABLE entries ADD COLUMN supersedes TEXT DEFAULT ''");
+  }
+  if (!cols.includes('updated_at')) {
+    db.exec("ALTER TABLE entries ADD COLUMN updated_at TEXT DEFAULT ''");
+  }
+  if (!cols.includes('wikilinks')) {
+    db.exec("ALTER TABLE entries ADD COLUMN wikilinks TEXT DEFAULT ''");
+  }
   db.exec('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)');
   db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
     id, cause_summary, tags, body_index,
@@ -147,8 +162,10 @@ function parseFrontmatter(content) {
     const kv = line.match(/^([A-Za-z_][\w]*):\s*(.*)$/);
     if (kv) {
       key = kv[1];
-      const raw = kv[2].trim().replace(/^["']|["']$/g, '');
-      if (raw.startsWith('[') && raw.endsWith(']')) {
+      let raw = kv[2].trim().replace(/^["']|["']$/g, '');
+      if (raw === 'true') raw = true;
+      else if (raw === 'false') raw = false;
+      if (typeof raw === 'string' && raw.startsWith('[') && raw.endsWith(']')) {
         meta[key] = raw.slice(1, -1).split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       } else {
         meta[key] = raw;
@@ -163,10 +180,41 @@ function parseFrontmatter(content) {
 }
 
 /**
+ * 提取正文与元数据中的关联双链目标 (支持 [[KI-xxxx]]、[[KI-xxxx: 描述]]、Markdown 链接以及 related 字段)
+ * @param {string} body
+ * @param {object} [meta]
+ * @returns {string[]}
+ */
+function extractWikilinks(body, meta = {}) {
+  const links = new Set();
+  if (Array.isArray(meta.related)) {
+    meta.related.forEach((r) => links.add(String(r).trim()));
+  } else if (typeof meta.related === 'string' && meta.related.trim()) {
+    meta.related.split(',').forEach((r) => links.add(r.trim()));
+  }
+
+  if (body) {
+    const wikiRegex = /\[\[([A-Za-z0-9_\-\.\u4e00-\u9fa5]+)(?::[^\]]+)?\]\]/g;
+    let m;
+    while ((m = wikiRegex.exec(body)) !== null) {
+      links.add(m[1].trim());
+    }
+
+    const mdLinkRegex = /\[[^\]]*\]\((?:\.\/)?([^)]+?)\.md\)/g;
+    while ((m = mdLinkRegex.exec(body)) !== null) {
+      links.add(path.basename(m[1].trim()));
+    }
+  }
+
+  if (meta.id) links.delete(meta.id);
+  return Array.from(links).filter(Boolean);
+}
+
+/**
  * 从 Markdown 文件提取条目字段
  * @param {string} filepath
  * @param {string} [scope]
- * @returns {{id:string, date:string, resolution_type:string, cause_summary:string, tags:string, filepath:string, mtimeMs:number, hash:string}|null}
+ * @returns {{id:string, date:string, resolution_type:string, cause_summary:string, tags:string, filepath:string, mtimeMs:number, hash:string, status?:string, superseded_by?:string, supersedes?:string, updated_at?:string, wikilinks?:string}|null}
  */
 function extractEntry(filepath, scope) {
   let content;
@@ -180,6 +228,7 @@ function extractEntry(filepath, scope) {
   const id = String(meta.id || path.basename(filepath, '.md'));
   const tags = Array.isArray(meta.tags) ? meta.tags : (meta.tags ? [meta.tags] : []);
   const cause = String(meta.cause_summary || body.replace(/\s+/g, ' ').trim().slice(0, 200));
+  const links = extractWikilinks(body, meta);
   const st = fs.statSync(filepath);
   return {
     id,
@@ -189,6 +238,14 @@ function extractEntry(filepath, scope) {
     tags: tags.join(','),
     filepath: path.resolve(filepath),
     body_index: body.replace(/\s+/g, ' ').trim().slice(0, 3000), // 正文入索引,提升召回
+    status: String(meta.status || 'active'),
+    superseded_by: String(meta.superseded_by || ''),
+    supersedes: String(meta.supersedes || ''),
+    updated_at: String(meta.updated_at || ''),
+    evolution_strategy: String(meta.evolution_strategy || ''),
+    target_ki: String(meta.target_ki || ''),
+    conflict_note: String(meta.conflict_note || ''),
+    wikilinks: links.join(','),
     mtimeMs: st.mtimeMs,
     hash: crypto.createHash('sha1').update(id + '|' + st.mtimeMs + '|' + st.size).digest('hex').slice(0, 16),
   };
@@ -196,19 +253,38 @@ function extractEntry(filepath, scope) {
 
 /**
  * upsert 一条条目(同时经触发器维护 FTS)
- * @param {{id:string, date?:string, resolution_type?:string, cause_summary?:string, tags?:string, filepath?:string, source?:string, body_index?:string}} e
+ * @param {{id:string, date?:string, resolution_type?:string, cause_summary?:string, tags?:string, filepath?:string, source?:string, body_index?:string, status?:string, superseded_by?:string, supersedes?:string, updated_at?:string, wikilinks?:string}} e
  */
 function upsertEntry(e) {
   const db = get();
-  db.prepare(`INSERT INTO entries (id, date, resolution_type, cause_summary, tags, filepath, source, body_index)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  db.prepare(`INSERT INTO entries (id, date, resolution_type, cause_summary, tags, filepath, source, body_index, status, superseded_by, supersedes, updated_at, wikilinks)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       date=excluded.date, resolution_type=excluded.resolution_type,
       cause_summary=excluded.cause_summary, tags=excluded.tags,
       filepath=excluded.filepath, source=excluded.source,
       body_index=excluded.body_index,
+      status=excluded.status,
+      superseded_by=excluded.superseded_by,
+      supersedes=excluded.supersedes,
+      updated_at=excluded.updated_at,
+      wikilinks=excluded.wikilinks,
       last_indexed=CURRENT_TIMESTAMP`)
-    .run(e.id, e.date || '', e.resolution_type || 'other', e.cause_summary || '', e.tags || '', e.filepath || '', e.source || '', e.body_index || '');
+    .run(
+      e.id,
+      e.date || '',
+      e.resolution_type || 'other',
+      e.cause_summary || '',
+      e.tags || '',
+      e.filepath || '',
+      e.source || '',
+      e.body_index || '',
+      e.status || 'active',
+      e.superseded_by || '',
+      e.supersedes || '',
+      e.updated_at || '',
+      e.wikilinks || ''
+    );
 }
 
 /** 按 id 删除条目(触发器同步删 FTS) */
@@ -221,11 +297,17 @@ function hasEntry(id) {
   return get().prepare('SELECT 1 c FROM entries WHERE id = ?').get(id) !== undefined;
 }
 
+/** 按 id 查找某条目详情 */
+function findEntry(id) {
+  const db = get();
+  return db.prepare('SELECT * FROM entries WHERE id = ?').get(id) || null;
+}
+
 /**
  * 关键词检索:FTS5 trigram(≥3 字符)→ LIKE 兜底(<3 字符或 FTS 失败)
  * @param {string} query
  * @param {number} [limit]
- * @returns {Array<{id:string, cause_summary:string, tags:string, filepath:string, resolution_type:string, source:string, snippet:string}>}
+ * @returns {Array<{id:string, cause_summary:string, tags:string, filepath:string, resolution_type:string, source:string, snippet:string, status:string, superseded_by:string, supersedes:string, updated_at:string, wikilinks:string}>}
  */
 function keywordSearch(query, limit = 10) {
   const q = String(query || '').trim();
@@ -237,6 +319,7 @@ function keywordSearch(query, limit = 10) {
     try {
       rows = db.prepare(
         `SELECT e.rowid, e.id, e.cause_summary, e.tags, e.filepath, e.resolution_type, e.source,
+                e.status, e.superseded_by, e.supersedes, e.updated_at, e.wikilinks,
                 snippet(entries_fts, 1, '', '', '...', 24) AS snippet
          FROM entries_fts JOIN entries e ON e.rowid = entries_fts.rowid
          WHERE entries_fts MATCH ?
@@ -260,7 +343,7 @@ function keywordSearch(query, limit = 10) {
     if (conds.length > 0) {
       params.push(limit);
       rows = db.prepare(
-        `SELECT id, cause_summary, tags, filepath, resolution_type, source
+        `SELECT id, cause_summary, tags, filepath, resolution_type, source, status, superseded_by, supersedes, updated_at, wikilinks
          FROM entries WHERE ${conds.join(' OR ')}
          LIMIT ?`
       ).all(...params);
@@ -273,6 +356,11 @@ function keywordSearch(query, limit = 10) {
     filepath: r.filepath,
     resolution_type: r.resolution_type,
     source: r.source,
+    status: r.status || 'active',
+    superseded_by: r.superseded_by || '',
+    supersedes: r.supersedes || '',
+    updated_at: r.updated_at || '',
+    wikilinks: r.wikilinks || '',
     snippet: r.snippet || r.cause_summary,
   }));
 }
@@ -353,4 +441,4 @@ function close() {
   _db = null;
 }
 
-module.exports = { open, get, migrate, repairFts, parseFrontmatter, extractEntry, upsertEntry, removeEntry, hasEntry, keywordSearch, scanMemoryDir, stats, close };
+module.exports = { open, get, migrate, repairFts, parseFrontmatter, extractEntry, upsertEntry, removeEntry, hasEntry, findEntry, keywordSearch, scanMemoryDir, stats, close };

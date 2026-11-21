@@ -11,9 +11,11 @@ const yongle = require('./core/index.js');
 function formatResult(item) {
   let tagsStr = '';
   if (Array.isArray(item.tags) && item.tags.length) tagsStr = `[${item.tags.join(', ')}]`;
-  const icon = item.source === 'semantic' ? '🧠' : '🔍';
+  const icon = item.isCausalContext ? '🔗' : (item.source === 'semantic' ? '🧠' : '🔍');
+  const titleColor = item.isCausalContext ? '\x1b[35m' : '\x1b[36m';
   const lv = item.level ? ` \x1b[33m(${item.level})\x1b[0m` : '';
-  return `${icon} \x1b[36m${item.title}\x1b[0m${lv} ${tagsStr}\n   \x1b[90m${item.snippet}\x1b[0m`;
+  const causalTip = item.causalSource ? ` \x1b[90m(由 ${item.causalSource} 关联引出)\x1b[0m` : '';
+  return `${icon} ${titleColor}${item.title}\x1b[0m${lv}${causalTip} ${tagsStr}\n   \x1b[90m${item.snippet}\x1b[0m`;
 }
 
 function printResults(title, results) {

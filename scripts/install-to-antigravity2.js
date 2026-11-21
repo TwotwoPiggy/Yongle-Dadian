@@ -42,6 +42,8 @@ const YONGLE_SKILLS = [
   'yongle-update',
   'yongle-config-export',
   'yongle-config-import',
+  'yongle-status',
+  'yongle-lint',
 ];
 
 const normalizedPackageRoot = packageRoot.replace(/\\/g, '/');

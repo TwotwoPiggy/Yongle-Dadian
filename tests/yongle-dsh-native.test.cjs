@@ -296,3 +296,46 @@ test('6. UI 卡片与状态看板: 验证 presentResult、草稿卡片与状态�
   assert.ok(draftCard.includes('Yongle 复盘草稿已生成'));
   assert.ok(draftCard.includes('/yongle-confirm'));
 });
+
+test('7. Web API 与可视化管理: 验证 /yongle 与 /api/yongle 路由注册与请求响应', async () => {
+  const { apply } = require('../dsh/src/index.js');
+  const registeredRoutes = new Map();
+  const mockWebCtx = {
+    effect: (fn) => fn(),
+    webServer: {
+      register: (route) => {
+        registeredRoutes.set(route.path, route);
+        return () => {};
+      }
+    }
+  };
+  const ctx = createMockContext();
+  ctx.inject = (deps, fn) => {
+    if (deps.includes('webServer')) fn(mockWebCtx);
+  };
+
+  apply(ctx, {});
+
+  assert.ok(registeredRoutes.has('/yongle'), 'Should register /yongle prefix route');
+  assert.ok(registeredRoutes.has('/api/yongle'), 'Should register /api/yongle prefix route');
+
+  // 模拟 GET /yongle/config 请求
+  const yongleRoute = registeredRoutes.get('/yongle');
+  assert.ok(typeof yongleRoute.handler === 'function');
+
+  let statusCode = 0;
+  let headers = {};
+  let body = '';
+  const mockRes = {
+    writeHead: (code, h) => { statusCode = code; headers = h; },
+    end: (data) => { body = data; }
+  };
+
+  await yongleRoute.handler({ method: 'GET', url: '/yongle/config' }, mockRes);
+  assert.equal(statusCode, 200);
+  const parsed = JSON.parse(body);
+  assert.equal(parsed.ok, true);
+  assert.ok(parsed.config);
+});
+
+

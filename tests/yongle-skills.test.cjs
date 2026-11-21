@@ -20,6 +20,7 @@ const EXPECTED_SKILLS = [
   'yongle-config-export',
   'yongle-config-import',
   'yongle-status',
+  'yongle-lint',
 ];
 
 describe('yongle skills structure', () => {

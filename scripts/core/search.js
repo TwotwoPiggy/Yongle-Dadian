@@ -72,6 +72,11 @@ async function hybridSearch(query, options = {}) {
       filepath: r.filepath,
       resolution_type: r.resolution_type,
       source: r.source,
+      status: r.status || 'active',
+      superseded_by: r.superseded_by || '',
+      supersedes: r.supersedes || '',
+      updated_at: r.updated_at || '',
+      wikilinks: r.wikilinks || '',
       snippet: r.snippet || r.cause_summary,
       _source: 'sqlite',
     }));
@@ -127,38 +132,113 @@ async function hybridSearch(query, options = {}) {
         if (r.content && r.content.length > 0 && !ex.cause_summary) ex.snippet = r.content;
       }
     } else {
+      const entry = db.findEntry(key);
       map.set(key, {
         id: key,
         title: key,
-        cause_summary: '',
-        tags: r.tags,
-        filepath: '',
-        resolution_type: '',
+        cause_summary: entry ? entry.cause_summary : '',
+        tags: entry && entry.tags ? entry.tags.split(',').filter(Boolean) : (r.tags || []),
+        filepath: entry ? entry.filepath : '',
+        resolution_type: entry ? entry.resolution_type : '',
         source: 'vector',
-        snippet: r.content || '',
+        status: entry ? (entry.status || 'active') : 'active',
+        superseded_by: entry ? (entry.superseded_by || '') : '',
+        supersedes: entry ? (entry.supersedes || '') : '',
+        updated_at: entry ? (entry.updated_at || '') : '',
+        wikilinks: entry ? (entry.wikilinks || '') : '',
+        snippet: r.content || (entry ? entry.cause_summary : ''),
         score,
         _isSemantic: true,
       });
     }
   });
 
+  // 演进策略：已废弃条目给予 0.5x 得分惩罚，确保最新方案优先排在前面
+  for (const item of map.values()) {
+    if (item.status === 'deprecated') {
+      item.score *= 0.5;
+    }
+  }
+
   const combined = Array.from(map.values())
     .sort((a, b) => b.score - a.score || String(a.id).localeCompare(String(b.id))) // 确定性排序
     .slice(0, limit)
-    .map((h) => ({
-      id: h.id,
-      title: h.id,
-      entryType: h.resolution_type || 'other',
-      tags: h.tags,
-      path: h.filepath || '',
-      snippet: (h.snippet || h.cause_summary || '').replace(/\s+/g, ' ').trim(),
-      score: Number(h.score.toFixed(6)),
-      source: h._source === 'vector' ? 'semantic' : 'keyword',
-      level,
-    }));
+    .map((h) => {
+      const isDeprecated = h.status === 'deprecated';
+      let snippet = (h.snippet || h.cause_summary || '').replace(/\s+/g, ' ').trim();
+      if (isDeprecated) {
+        const replaceTip = h.superseded_by ? ` (已废弃，最新替代方案: ${h.superseded_by})` : ' (已废弃)';
+        snippet = `[已废弃] ${snippet}${replaceTip}`;
+      }
+      return {
+        id: h.id,
+        title: isDeprecated ? `${h.id} [已废弃]` : h.id,
+        entryType: h.resolution_type || 'other',
+        tags: h.tags,
+        path: h.filepath || '',
+        snippet,
+        score: Number(h.score.toFixed(6)),
+        source: h._source === 'vector' ? 'semantic' : 'keyword',
+        level,
+        status: h.status || 'active',
+        deprecated: isDeprecated,
+        superseded_by: h.superseded_by || '',
+        supersedes: h.supersedes || '',
+        updated_at: h.updated_at || '',
+        wikilinks: h.wikilinks || '',
+      };
+    });
+
+  // 4) 1-Hop 因果拓扑扩散检索 (Wikilinks 1-Hop Expansion)
+  const causalContext = [];
+  if (opts.expandWikilinks !== false) {
+    const hitIds = new Set(combined.map((h) => h.id));
+    const maxCausal = Math.min(2, Math.max(1, opts.maxCausal || 2)); // 防扩散泛滥约束: 最大 2 条
+
+    for (const h of combined) {
+      if (causalContext.length >= maxCausal) break;
+      const targetLinks = String(h.wikilinks || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const targetId of targetLinks) {
+        if (causalContext.length >= maxCausal) break;
+        if (hitIds.has(targetId)) continue;
+
+        const targetEntry = db.findEntry(targetId);
+        if (targetEntry) {
+          hitIds.add(targetId);
+          const isDep = targetEntry.status === 'deprecated';
+          let cSnippet = (targetEntry.cause_summary || targetEntry.body_index || '').replace(/\s+/g, ' ').trim();
+          if (isDep) cSnippet = `[已废弃] ${cSnippet}`;
+
+          causalContext.push({
+            id: targetEntry.id,
+            title: `${targetEntry.id} [因果关联延伸]`,
+            entryType: targetEntry.resolution_type || 'other',
+            tags: (targetEntry.tags || '').split(',').filter(Boolean),
+            path: targetEntry.filepath || '',
+            snippet: `[因果关联延伸 - 关联自 ${h.id}] ${cSnippet}`,
+            score: Number((h.score * 0.75).toFixed(6)),
+            source: 'causal-wikilink',
+            level,
+            status: targetEntry.status || 'active',
+            deprecated: isDep,
+            superseded_by: targetEntry.superseded_by || '',
+            supersedes: targetEntry.supersedes || '',
+            updated_at: targetEntry.updated_at || '',
+            wikilinks: targetEntry.wikilinks || '',
+            isCausalContext: true,
+            causalSource: h.id,
+          });
+        }
+      }
+    }
+  }
 
   timings.totalMs = Date.now() - started;
-  const result = { hits: combined, mode, timings };
+  const result = { hits: [...combined, ...causalContext], causalContext, mode, timings };
   resultCache.set(cacheKey, result);
   return { ...result, cache: null };
 }

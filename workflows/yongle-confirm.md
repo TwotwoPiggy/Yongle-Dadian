@@ -1,51 +1,70 @@
 <purpose>
-灏嗘案涔愬ぇ鍏歌崏绋匡紙.draft.md锛夋寮忓綊妗ｃ€傛敮鎸佺洿鎺ユ寚瀹氭枃浠惰矾寰勶紝鎴栬€呭湪鏈寚瀹氭椂鑷姩鎵弿骞跺垪鍑烘墍鏈夎崏绋夸緵鐢ㄦ埛閫夋嫨銆?</purpose>
+将永乐大典草稿（.draft.md）正式归档。支持直接指定文件路径，或者在未指定时自动扫描并列出所有草稿供用户选择。全面支持吸收 LLM Wiki 思想的原地演进合流（create_new 独立新建、supplement 原地补充追加、supersede 推翻废弃旧案）。
+</purpose>
 
 <process>
 
-**Step 1: 鐜涓庡弬鏁板噯澶?*
+**Step 1: 环境与参数准备**
 
-瑙ｆ瀽 `$ARGUMENTS` 鎻愬彇 `$DRAFT_PATH`銆?
+解析 `$ARGUMENTS` 提取 `$DRAFT_PATH` 及演进选项（如 `--strategy`、`--target`、`--note`）。
+
+确定知识库根路径：
 ```bash
-# Windows PowerShell 鍏煎澶勭悊: $HOME 涓虹┖鏃跺洖閫€鍒?$USERPROFILE
+# Windows PowerShell 兼容处理: $HOME 为空时回退到 $USERPROFILE
 HOME_DIR="${HOME:-$USERPROFILE}"
 ARCHIVE_DIR="${HOME_DIR}/.yongle_knowledge"
 ```
 
-**Step 2: 纭畾鐩爣鑽夌**
-
-鑻?`$DRAFT_PATH` 涓虹┖锛?
-1. **鎵弿鎵€鏈夎崏绋?*锛?   ```bash
-   ls "${ARCHIVE_DIR}"/*.draft.md 2>/dev/null
-   ```
-
-2. **鎻愮ず鐢ㄦ埛閫夋嫨**锛?   鑻ユ棤鑽夌锛屾彁绀?`鏈壘鍒板緟褰掓。鐨勮崏绋挎枃浠躲€俙 骞堕€€鍑恒€?   鑻ユ湁鑽夌锛屼娇鐢?`AskUserQuestion` 灞曠ず鍒楄〃銆?
-鑻?`$DRAFT_PATH` 涓嶄负绌猴紝楠岃瘉鏂囦欢鏄惁瀛樺湪銆?
 ---
 
-**Step 3: 瀹￠槄骞剁‘璁?*
+**Step 2: 确定目标草稿**
 
-璇诲彇鑽夌鏂囦欢鐨?Frontmatter 淇℃伅锛坕d, date, resolution_type, cause_summary锛夊睍绀虹粰鐢ㄦ埛銆?
+若 `$DRAFT_PATH` 为空：
+1. **扫描所有草稿**：
+   ```bash
+   ls "${ARCHIVE_DIR}/drafts"/*.md 2>/dev/null || ls "${ARCHIVE_DIR}"/*.draft.md 2>/dev/null
+   ```
+
+2. **提示用户选择**：
+   - 若无草稿，提示 `未找到待归档的草稿文件。` 并退出。
+   - 若有草稿，使用 `AskUserQuestion` 展示草稿列表。
+
+若 `$DRAFT_PATH` 不为空，验证文件是否存在。
+
+---
+
+**Step 3: 审阅与确认**
+
+读取草稿文件的 Frontmatter 信息（`id`, `date`, `resolution_type`, `cause_summary`, `evolution_strategy`, `target_ki`, `conflict_note`）展示给用户。
+
 ```
-鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹? 姘镐箰澶у吀 鈻?鍑嗗褰掓。鑽夌
-鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹?
-馃搫 璺緞: {DRAFT_PATH}
-馃搵  ID:   {id}
-馃搮 鏃ユ湡:  {date}
-馃挕 鏍瑰洜:  {cause_summary}
-
-纭褰掓。锛?```
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 永乐大典 ▶ 准备归档草稿
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 路径:     {DRAFT_PATH}
+📋 ID:       {id}
+📅 日期:     {date}
+🏷️ 分类:     {resolution_type}
+💡 根因:     {cause_summary}
+🔄 演进策略: {evolution_strategy}
+🎯 目标条目: {target_ki}
+📝 演进说明: {conflict_note}
 ```
+
 > [!IMPORTANT]
-> **AUTOMATION HOOK**: If `YONGLE_TEST_MODE` is "true", automatically select the first option ("✅ 确认归档") and skip the interactive prompt.
+> **AUTOMATION HOOK**: 若 `YONGLE_TEST_MODE` 为 "true" 或全局开启了 `auto_confirm`，自动确认并跳过交互式提示。
 
+若未开启免交互，展示确认选项：
+```
 AskUserQuestion(
-  header: "纭褰掓。",
-  question: "鏄惁灏嗘鑽夌姝ｅ紡瀛樺叆鐭ヨ瘑搴擄紵",
+  header: "确认归档",
+  question: "请选择如何将此草稿存入知识库：",
   options: [
-    { label: "鉁?纭褰掓。", description: "閲嶅懡鍚嶅苟鏇存柊绱㈠紩" },
-    { label: "鉂?鍙栨秷", description: "淇濈暀鑽夌涓嶆搷浣? }
+    { label: "✅ 按预设策略合流归档", description: "根据草稿中的 evolution_strategy 自动执行新建或原地合流" },
+    { label: "🔄 强制原地补充 (supplement)", description: "向指定的 target_ki 历史旧条目追加补充更新小节" },
+    { label: "⚠️ 强制推翻旧案 (supersede)", description: "将 target_ki 标记为 deprecated 废弃，并与新条目双向关联" },
+    { label: "🆕 强制作为全新条目 (create_new)", description: "忽略关联条目，作为独立的新条目归档" },
+    { label: "❌ 取消", description: "保留草稿不操作" }
   ],
   multiSelect: false
 )
@@ -53,57 +72,51 @@ AskUserQuestion(
 
 ---
 
-**Step 4: 鎵ц褰掓。閫昏緫**
+**Step 4: 执行归档与演进合流**
 
-鐢ㄦ埛鐐瑰嚮纭鍚庯細
+用户确认后，调用内置 CLI 或核心 API 执行合流：
 
-1. **璁＄畻姝ｅ紡璺緞**锛?   灏嗘枃浠跺悕涓殑 `.draft.md` 鏇挎崲涓?`.md`銆?   `FINAL_PATH=$(echo "$DRAFT_PATH" | sed 's/\.draft\.md$/.md/')`
+```bash
+node scripts/yongle-confirm.js "$DRAFT_PATH" \
+  ${STRATEGY:+--strategy "$STRATEGY"} \
+  ${TARGET_KI:+--target "$TARGET_KI"} \
+  ${CONFLICT_NOTE:+--note "$CONFLICT_NOTE"}
+```
 
-2. **娓呮礂鍏冩暟鎹?*锛?   璇诲彇鑽夌鍐呭锛屽皢 `draft: true` 琛岀Щ闄わ紝鍐欏叆姝ｅ紡鏂囦欢璺緞銆?
-3. **鏇存柊绱㈠紩锛圛NDEX.md锛?*锛?   璇诲彇鑽夌涓殑鍏冩暟鎹瓧娈点€?   ```bash
-   INDEX_PATH="${ARCHIVE_DIR}/INDEX.md"
-   
-   # 濡傛灉绱㈠紩涓嶅瓨鍦紝鍏堝垵濮嬪寲琛ㄥご
-   if [ ! -f "$INDEX_PATH" ]; then
-     echo "# 姘镐箰澶у吀鐭ヨ瘑绱㈠紩" > "$INDEX_PATH"
-     echo "" >> "$INDEX_PATH"
-     echo "| 鏃ユ湡 | 鏉＄洰ID | 鍒嗙被 | 鏍瑰洜鎽樿 | 鏍囩 |" >> "$INDEX_PATH"
-     echo "|------|--------|------|----------|------|" >> "$INDEX_PATH"
-   fi
+**合流执行细节**：
+1. **`create_new`（新建独立条目）**：
+   - 移除 `draft: true` 标记；
+   - 写入 `${ARCHIVE_DIR}/memory/${id}.md`；
+   - 移除原草稿文件；
+   - 触发 SQLite 增量扫描与向量化。
 
-   # 杩藉姞鎽樿琛?   echo "| {date} | [{id}](./${FINAL_FILENAME}) | {resolution_type} | {cause_summary} | {tags_inline} |" >> "$INDEX_PATH"
+2. **`supplement`（原地补充更新）**：
+   - 定位 `target_ki` 对应的物理条目；
+   - 在旧条目 Frontmatter 中更新 `updated_at`；
+   - 在旧条目正文末尾追加 `## 补充演进 (日期)` 小节，包含演进原因与补充方案；
+   - 移除临时草稿；
+   - 原地更新 SQLite 与 LanceDB 向量数据。
 
-   # 5. 鏇存柊 SQLite 绱㈠紩
-   # 棣栧厛纭畾 SCOPE
-   if [[ "$DRAFT_PATH" == *".planning/knowledge"* ]]; then
-     DB_SCOPE="local"
-   else
-     DB_SCOPE="global"
-   fi
-   # 鍑嗗鏁版嵁 JSON
-   DATA_JSON="{\"id\": \"$ID\", \"date\": \"$DATE\", \"resolution_type\": \"$TYPE\", \"cause_summary\": \"$SUMMARY\", \"tags\": [${TAGS_ARRAY}], \"filepath\": \"$FINAL_PATH\"}"
-   node yongle/scripts/yongle-db.js upsert "$DB_SCOPE" "$DATA_JSON"
+3. **`supersede`（推翻废弃旧条目）**：
+   - 定位 `target_ki` 对应的物理条目；
+   - 将旧条目 Frontmatter 标记为 `status: deprecated`、`superseded_by: {new_id}`；
+   - 在旧条目正文顶部插入 `> [!WARNING] 此方案已废弃` 呼出块并链接到新条目；
+   - 将新草稿标记 `status: active`、`supersedes: {target_ki}`，存为正式条目；
+   - 移除临时草稿；
+   - 刷新旧条目与新条目的 SQLite 与向量数据。
 
-   # 6. 触发后台 Embedding 任务 (Fire-and-forget)
-   node yongle-dadian/scripts/yongle-embed.js "$DB_SCOPE" "$FINAL_PATH" > /dev/null 2>&1 &
-   ```
-
-4. **娓呯悊鏃ф枃浠?*锛?   鍒犻櫎鍘熻崏绋挎枃浠躲€?
 ---
 
-**Step 5: 瀹屾垚鎻愮ず**
+**Step 5: 完成提示**
 
 ```
-鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹? 姘镐箰澶у吀 鈻?褰掓。瀹屾垚 鉁?鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹佲攣鈹?
-馃摎 宸插綊妗? {FINAL_PATH}
-馃搵 绱㈠紩宸叉洿鏂般€?
-# 鍚庡彴闈欓粯鍚屾 (鍙€?
-SYNC_MODE=$(node "d:\Computers\AI Develop\Tools\Skills\yongle\sdk\src\config-get.ts" yongle.sync.mode 2>/dev/null || echo "manual")
-if [ "$SYNC_MODE" = "auto" ] || [ "$SYNC_MODE" = "both" ]; then
-  echo "姝ｅ湪鎵ц鍚庡彴闈欓粯鍚屾..."
-  node "d:\Computers\AI Develop\Tools\Skills\yongle\sdk\src\sync-cli.ts" --scope=all > /dev/null 2>&1 &
-fi
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 永乐大典 ▶ 归档完成 ✅
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 动作类型: {action}
+📁 正式文件: {FINAL_PATH}
+📋 数据库索引已更新
+💡 检索时将自动自适应最新结论与弃用状态。
 ```
 
 </process>
-

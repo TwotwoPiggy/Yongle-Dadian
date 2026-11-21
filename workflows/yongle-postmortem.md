@@ -45,39 +45,51 @@ node -e "const fs = require('fs'); const dir = process.argv[1]; if (!fs.existsSy
 
 ---
 
-**Step 2: 上下文智能回溯与分析**
+**Step 2: 双阶段思维链分析 (Two-Step CoT Pipeline)**
 
 显示分析提示：
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 永乐大典 ▶ 正在扫描对话上下文...
+ 永乐大典 ▶ 正在启动双阶段思维链复盘流水线...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-向上回溯当前对话的历史记录，执行以下智能识别：
+为了彻底消除单次 Prompt 提炼导致的"因果幻觉"与"归因草率"，并完整保留最珍贵的"踩坑与负面尝试记录"，执行严格的双阶段分析：
 
-**2a. 检查活跃追踪 (WATCHING.md)**
-- 检查是否存在 `.planning/yongle/WATCHING.md`。
-- 如果存在，将其视为*最高优先级上下文*。文件中的 `Timeline` 记录了 AI 的真实调试轨迹，应优先于大模型的对话回溯记忆。
-- 如果不存在，则按常规方式回溯当前对话。
+#### 【Stage 1: Reasoning Pass — 事实归因与试错沉淀】
+先不急于输出任何 YAML/JSON 结构，进行深度纯文本推导与事实求证：
+1. **检查活跃追踪 (WATCHING.md)**:
+   - 若存在 `.planning/yongle/WATCHING.md`，将其作为最高优先级真实轨迹基准，提取 Timeline。
+2. **定位问题边界与验证状态**:
+   - 提取最初的报错现场、关键堆栈与具体复现条件。
+   - **真实解决门禁（Unsolved Gate）**：检查任务是否真正解决。若属于"绕过/放弃/用假数据糊弄/未验证"状态，严禁草率归档，应提示用户停止本次提炼。
+3. **失败尝试还原（Negative Trials）**:
+   - 详细梳理中途尝试了哪些方向？为什么前面几次失败了？（失败尝试与避坑指南具有同等甚至更高价值）。
+4. **物理/逻辑本质根因推导**:
+   - 探究引起故障的底层机制，而非表面症状。
+   - 明确哪一次操作、哪几行代码改动最终使系统恢复正常。
 
-**2b. 识别问题边界**
-- 定位对话中出现的**第一个报错信号**（如：错误堆栈、Build Failed、Exception、构建中断等关键词）
-- 定位**最终解决方案**（如：用户确认"成功了"、"跑通了"、"好的"等，或最后一次成功的代码运行结果）
-- 如果问题经历了**多次尝试**（失败→重试→成功），将这几次相关的上下文*整体打包*作为分析基础，不裁剪中间的失败尝试（它们是最宝贵的"踩坑记录"）
+#### 【Stage 2: Compilation Pass — 结构化编译与元数据对齐】
+基于 Stage 1 得出的事实推导结果，编译输出规范的标准化知识文档：
+1. **提炼结构化章节**:
+   - **问题根因（Root Cause）**：一句话直击要害。
+   - **调试历程（Debug Path）**：完整包含尝试清单与失败分支分析。
+   - **最终解决方案（Resolution）**：经过验证的清晰操作步骤与代码。
+   - **防复发建议（Prevention）**：工程防御与配置防护建议。
+2. **对齐 6 大规范元数据**:
+   - 推断 `resolution_type` (bug-fix | config-fix | api-change | env-issue | logic-error | other)
+   - 提取精确技术栈 `tags`
+   - 记录 `host_agent` 与当前日期 `date`
+   - 生成符合规范的 `id`（`YYYYMMDD-<kebab-cause-summary>`）
 
-**2c. 提炼核心内容**：
-- **根本原因**（Root Cause）：一句话说清为何会出错
-- **调试历程**（Debug Path）：简述尝试了哪些方向，哪些失败了、哪些成功了（结合 WATCHING.md 的 Timeline）
-- **最终解决方案**（Resolution）：最终起作用的具体操作步骤
-- **防复发建议**（Prevention）：下次如何避免类似问题
-
-**2d. 填充元数据**：
-- 根据内容推断 `resolution_type`
-- 根据涉及的技术栈提取 `tags`（如: dotnet, ef-core, build, migrations, docker）
-- `host_agent` 设置为当前宿主环境（如 `antigravity`）
-- `date` 设置为今日日期
-- `id` 格式为 `YYYYMMDD-<kebab-cause-summary>`（最多5个单词）
+#### 【Stage 3: 查重与原地演进嗅探 (Duplicate Sniffing)】
+1. 以提取的核心错误信息与 `cause_summary` 在 SQLite/向量库中执行嗅探检索。
+2. 若命中高重合度条目：
+   - 标记 `IS_DUPLICATE=true`，获取目标条目 ID（如 `$TARGET_KI`）与历史记录。
+   - 预设演进策略：
+     - 若旧方案仍有效但需版本/环境增量 → 推荐 `supplement`（原地补充）
+     - 若旧方案已彻底过时被推翻 → 推荐 `supersede`（推翻废弃旧方案）
+     - 否则为 `create_new`（独立新建）
 
 ---
 
@@ -96,6 +108,12 @@ node -e "const fs = require('fs'); const dir = process.argv[1]; if (!fs.existsSy
 💡  根因摘要:    {cause_summary}
 ```
 
+若嗅探到高重合度的历史条目，展示原地演进预警：
+```
+⚠️ 发现潜在重合的历史条目: [{target_ki}] {target_summary}
+🔄 建议演进策略: {suggested_strategy} (supplement 原地补充 / supersede 推翻废弃)
+```
+
 > [!IMPORTANT]
 > **AUTOMATION HOOK**: 若 `AUTO_ARCHIVE` 为 `true`，直接打印 `⚡ 已启用 auto_confirm / 免交互模式，正在直接归档...`，跳过询问直接进入 **Step 4（正式归档）**。
 
@@ -103,9 +121,11 @@ node -e "const fs = require('fs'); const dir = process.argv[1]; if (!fs.existsSy
 ```
 AskUserQuestion(
   header: "永乐大典 — 归档确认",
-  question: "复盘提炼已完成，请选择归档方式：",
+  question: "复盘提炼已完成，请选择归档方式与演进策略：",
   options: [
-    { label: "✅ 确认并直接归档", description: "直接写入正式知识库并更新索引（推荐，一步搞定）" },
+    { label: "✅ 确认并直接归档", description: "按预设策略写入正式知识库并更新索引（推荐，一步搞定）" },
+    { label: "🔄 原地增量补充 (supplement)", description: "向关联的历史旧条目追加版本迭代小节，更新修改时间" },
+    { label: "⚠️ 推翻旧案并归档 (supersede)", description: "将历史旧条目标记为 deprecated 废弃，并与新条目互相关联" },
     { label: "📝 存为草稿稍后编辑", description: "生成 .draft.md，保留草稿以便后续手动精修" },
     { label: "✏️ 修改根因摘要", description: "对 cause_summary 进行微调后再确认" },
     { label: "🏷️ 修改标签/分类", description: "对 tags 或 resolution_type 进行调整" },
@@ -115,7 +135,7 @@ AskUserQuestion(
 )
 ```
 
-- **若用户选择 "✅ 确认并直接归档"**：进入 **Step 4**。
+- **若用户选择 "✅ 确认并直接归档"** 或根据策略选择：进入 **Step 4**，调用 `confirmDraft` 或原地写入。
 - **若用户选择 "📝 存为草稿稍后编辑"**：进入 **Step 5**。
 - **若用户选择 "修改根因摘要" 或 "修改标签/分类"**：用文本跟进问题收集修改内容，更新相应字段后重新展示确认。
 - **若用户选择 "取消"**：打印 `已取消归档。` 并退出流程。

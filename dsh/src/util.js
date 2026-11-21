@@ -7,6 +7,9 @@
  *  - 首次检索自动建索引(无感)
  */
 import yongle from '../lib/core/index.js';
+import yongleConfig from '../lib/yongle-config.js';
+
+export { yongle, yongleConfig };
 
 /**
  * 合并配置:插件配置(来自 cordis.yml)优先于 yongle 全局配置
@@ -131,5 +134,3 @@ export function emitSessionEvent(ctx, agentOrSession, event) {
   }
 }
 
-/** 核心引擎(供工具/命令/钩子共享) */
-export { yongle };

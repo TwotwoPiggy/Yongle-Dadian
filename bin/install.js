@@ -241,6 +241,7 @@ const YONGLE_SKILLS = [
   'yongle-config-export',
   'yongle-config-import',
   'yongle-status',
+  'yongle-lint',
 ];
 
 const YONGLE_WORKFLOWS = [
@@ -251,6 +252,7 @@ const YONGLE_WORKFLOWS = [
   'yongle-tag.md',
   'yongle-reindex.md',
   'yongle-check-dream.md',
+  'yongle-lint.md',
 ];
 
 const YONGLE_SCRIPTS = [
@@ -261,6 +263,8 @@ const YONGLE_SCRIPTS = [
   'yongle-bg-archiver.js',
   'yongle-logger.js',
   'yongle-status.js',
+  'yongle-lint.js',
+  'yongle-confirm.js',
 ];
 
 function installForRuntime(runtime) {

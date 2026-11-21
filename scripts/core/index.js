@@ -24,6 +24,7 @@ const embed = require('./embed');
 const search = require('./search');
 const render = require('./render');
 const postmortem = require('./postmortem');
+const lint = require('./lint');
 const { loadMergedConfig } = require('../yongle-config.js');
 
 /**
@@ -242,6 +243,85 @@ async function embedDocument(filepath, options = {}) {
  *          extraContext?:string, cwd?:string}} [options]
  * @returns {Promise<{ok:boolean, level:string, draftPath?:string, id?:string, draft?:object, error?:string}>}
  */
+/**
+ * 辅助函数:安全更新 Markdown 文件的 Frontmatter 键值对
+ */
+function updateFrontmatter(content, fields) {
+  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!m) return content;
+  const fmLines = m[1].split(/\r?\n/);
+  const body = m[2] || '';
+  const remainingKeys = new Set(Object.keys(fields));
+  const newFmLines = [];
+
+  for (const line of fmLines) {
+    const kv = line.match(/^([A-Za-z_][\w]*):\s*(.*)$/);
+    if (kv && kv[1] in fields) {
+      const val = fields[kv[1]];
+      remainingKeys.delete(kv[1]);
+      if (val !== undefined && val !== null && val !== '') {
+        if (typeof val === 'boolean' || typeof val === 'number') {
+          newFmLines.push(`${kv[1]}: ${val}`);
+        } else if (Array.isArray(val)) {
+          newFmLines.push(`${kv[1]}:\n${val.map((v) => `  - ${v}`).join('\n')}`);
+        } else {
+          newFmLines.push(`${kv[1]}: "${String(val).replace(/"/g, '\\"')}"`);
+        }
+      }
+    } else {
+      newFmLines.push(line);
+    }
+  }
+
+  for (const k of remainingKeys) {
+    const val = fields[k];
+    if (val !== undefined && val !== null && val !== '') {
+      if (typeof val === 'boolean' || typeof val === 'number') {
+        newFmLines.push(`${k}: ${val}`);
+      } else if (Array.isArray(val)) {
+        newFmLines.push(`${k}:\n${val.map((v) => `  - ${v}`).join('\n')}`);
+      } else {
+        newFmLines.push(`${k}: "${String(val).replace(/"/g, '\\"')}"`);
+      }
+    }
+  }
+
+  return `---\n${newFmLines.filter(Boolean).join('\n')}\n---\n\n${body.replace(/^\r?\n+/, '')}`;
+}
+
+/**
+ * 辅助函数:定位条目物理 Markdown 文件
+ */
+function locateEntryFile(targetId, p, cwd, config) {
+  db.open(p.db);
+  const entry = db.findEntry(targetId);
+  if (entry && entry.filepath && fs.existsSync(entry.filepath)) {
+    return entry.filepath;
+  }
+  // 检查当前级别的 memory 目录
+  const directPath = path.join(p.memoryDir, `${targetId}.md`);
+  if (fs.existsSync(directPath)) return directPath;
+
+  // 遍历搜索可用级别
+  const allLevels = paths.listLevels(cwd, config).filter((l) => l.enabled);
+  for (const l of allLevels) {
+    const lp = paths.resolveLevel(l.level, cwd, config);
+    db.open(lp.db);
+    const le = db.findEntry(targetId);
+    if (le && le.filepath && fs.existsSync(le.filepath)) return le.filepath;
+    const lDirect = path.join(lp.memoryDir, `${targetId}.md`);
+    if (fs.existsSync(lDirect)) return lDirect;
+  }
+  return null;
+}
+
+/**
+ * 从会话事件日志生成复盘草稿(LLM 蒸馏,查重嗅探,草稿待确认)
+ * @param {{level?:string, events:Array<object>, config?:object, llm?:Function,
+ *          extraContext?:string, cwd?:string, sniff?:boolean}} [options]
+ * @returns {Promise<{ok:boolean, level:string, draftPath?:string, id?:string, draft?:object,
+ *                    isDuplicateSuspect?:boolean, duplicateCandidates?:Array<object>, suggestedStrategy?:string, targetKi?:string, error?:string}>}
+ */
 async function createPostmortemDraft(options = {}) {
   const p = resolveLevel(options.level || 'user', options);
   const config = init(options.config);
@@ -249,23 +329,63 @@ async function createPostmortemDraft(options = {}) {
   if (!material.userRequests.length && !material.failedTools.length && !material.assistantText) {
     return { ok: false, level: p.level, error: 'no usable session material' };
   }
-  const result = await postmortem.distill({ material, config, llm: options.llm, extraContext: options.extraContext });
+  const result = await postmortem.distill({
+    material,
+    config,
+    llm: options.llm,
+    extraContext: options.extraContext,
+    twoStep: options.twoStep,
+  });
   if (!result.ok) return { ok: false, level: p.level, error: result.error };
-  const { draftPath, id } = postmortem.writeDraftFile({
+
+  // 查重嗅探 (默认开启)
+  let sniffResult = { isDuplicateSuspect: false, candidates: [], suggestedStrategy: 'create_new', targetKi: '' };
+  if (options.sniff !== false) {
+    try {
+      sniffResult = await postmortem.sniffDuplicates({
+        material,
+        draft: result.draft,
+        cwd: options.cwd || p.cwd,
+        config,
+      });
+    } catch {
+      // 嗅探失败不阻断草稿生成
+    }
+  }
+
+  const { draftPath, id, evolutionStrategy, targetKi, conflictNote } = postmortem.writeDraftFile({
     draftDir: path.join(p.root, 'drafts'),
     draft: result.draft,
     originalQuestion: material.userRequests.join(' | '),
+    evolutionStrategy: options.evolutionStrategy || sniffResult.suggestedStrategy,
+    targetKi: options.targetKi || sniffResult.targetKi,
+    conflictNote: options.conflictNote || '',
   });
-  return { ok: true, level: p.level, draftPath, id, draft: result.draft };
+
+  return {
+    ok: true,
+    level: p.level,
+    draftPath,
+    id,
+    draft: result.draft,
+    reasoning: result.reasoning,
+    isDuplicateSuspect: sniffResult.isDuplicateSuspect,
+    duplicateCandidates: sniffResult.candidates,
+    suggestedStrategy: sniffResult.suggestedStrategy,
+    targetKi: sniffResult.targetKi,
+    evolutionStrategy,
+  };
 }
 
 /**
- * 确认复盘草稿:移除 draft 标记 → 移入正式 memory 目录 → 增量索引 → 后台向量化
- * @param {{level?:string, draftPath:string, cwd?:string, config?:object, embed?:boolean}} [options]
- * @returns {{ok:boolean, level:string, filepath?:string, id?:string, error?:string}}
+ * 确认复盘草稿:支持 create_new(默认新建)、supplement(原地追加更新) 与 supersede(推翻旧案并链接新条目)
+ * @param {{level?:string, draftPath:string, strategy?:string, targetKi?:string, conflictNote?:string,
+ *          cwd?:string, config?:object, embed?:boolean}} [options]
+ * @returns {{ok:boolean, level:string, action?:string, filepath?:string, id?:string, supersededTarget?:string, error?:string}}
  */
 function confirmDraft(options = {}) {
   const p = resolveLevel(options.level || 'user', options);
+  const cfg = init(options.config);
   const draftPath = String(options.draftPath || '').trim();
   if (!draftPath || !fs.existsSync(draftPath)) {
     return { ok: false, level: p.level, error: `draft not found: ${draftPath}` };
@@ -276,27 +396,147 @@ function confirmDraft(options = {}) {
   } catch (e) {
     return { ok: false, level: p.level, error: `cannot read draft: ${e.message}` };
   }
-  // 移除 draft 标记
-  const cleaned = content
-    .replace(/^draft:\s*true\s*$/m, '')
-    .replace(/^\s*-\s*$/m, '');
-  const { meta } = db.parseFrontmatter(cleaned);
+
+  const { meta, body } = db.parseFrontmatter(content);
   const id = String(meta.id || path.basename(draftPath, '.md'));
+  const strategy = String(options.strategy || meta.evolution_strategy || 'create_new').toLowerCase();
+  const targetKi = String(options.targetKi || meta.target_ki || '').trim();
+  const conflictNote = String(options.conflictNote || meta.conflict_note || '').trim();
+
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const finalFilename = path.basename(draftPath).replace(/\.draft\.md$/, '.md');
+
+  // 分支 1: 原地补充增量 (supplement)
+  if (strategy === 'supplement') {
+    if (!targetKi) {
+      return { ok: false, level: p.level, error: 'supplement strategy requires target_ki' };
+    }
+    const targetFile = locateEntryFile(targetKi, p, options.cwd || p.cwd, cfg);
+    if (!targetFile || !fs.existsSync(targetFile)) {
+      return { ok: false, level: p.level, error: `target KI file not found for id: ${targetKi}` };
+    }
+
+    const targetContent = fs.readFileSync(targetFile, 'utf8');
+    const updatedTargetFm = updateFrontmatter(targetContent, {
+      updated_at: `${dateStr} ${timeStr}`,
+    });
+
+    const solMatch = body.match(/## 解决方案\r?\n+([\s\S]*?)(?=\n##|$)/);
+    const solContent = solMatch ? solMatch[1].trim() : body.trim();
+    const noteText = conflictNote ? `> **演进原因**：${conflictNote}\n` : '';
+
+    const appendix = [
+      '',
+      `## 补充演进 (${dateStr} ${timeStr})`,
+      '',
+      '> [!NOTE]',
+      `> **更新模式**：原地补充更新 (In-place Supplement)`,
+      noteText.trim(),
+      '',
+      '### 补充方案',
+      '',
+      solContent,
+      '',
+    ].filter(Boolean).join('\n');
+
+    fs.writeFileSync(targetFile, updatedTargetFm + appendix, 'utf8');
+    try { fs.unlinkSync(draftPath); } catch { /* ignore */ }
+
+    // 原地重新索引
+    db.open(p.db);
+    db.scanMemoryDir([p.root, p.memoryDir, path.dirname(targetFile)], p.level);
+    search.invalidateScope();
+
+    if (options.embed !== false) {
+      embedDocument(targetFile, { level: p.level, cwd: p.cwd, config: cfg }).catch(() => {});
+    }
+
+    return { ok: true, level: p.level, action: 'supplement', filepath: targetFile, id: targetKi };
+  }
+
+  // 分支 2: 推翻废弃旧方案 (supersede)
+  if (strategy === 'supersede') {
+    if (!targetKi) {
+      return { ok: false, level: p.level, error: 'supersede strategy requires target_ki' };
+    }
+    const targetFile = locateEntryFile(targetKi, p, options.cwd || p.cwd, cfg);
+    if (!targetFile || !fs.existsSync(targetFile)) {
+      return { ok: false, level: p.level, error: `target KI file not found for id: ${targetKi}` };
+    }
+
+    // 1) 标记旧条目废弃
+    const targetContent = fs.readFileSync(targetFile, 'utf8');
+    let targetUpdatedFm = updateFrontmatter(targetContent, {
+      status: 'deprecated',
+      superseded_by: id,
+      updated_at: `${dateStr} ${timeStr}`,
+    });
+
+    const noteText = conflictNote ? `\n> **废弃原因**：${conflictNote}` : '';
+    const deprecateCallout = `> [!WARNING]\n> **此方案已废弃（Deprecated）**${noteText}\n> **最新替代方案**：[${id}](./${finalFilename})\n\n`;
+
+    // 插入警告呼出块：安全插入在 frontmatter 之后、正文之前
+    const fmMatch = targetUpdatedFm.match(/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)([\s\S]*)$/);
+    let newTargetContent;
+    if (fmMatch) {
+      newTargetContent = `${fmMatch[1]}\n${deprecateCallout}${fmMatch[2].replace(/^\r?\n+/, '')}`;
+    } else {
+      newTargetContent = `${deprecateCallout}${targetUpdatedFm}`;
+    }
+    fs.writeFileSync(targetFile, newTargetContent, 'utf8');
+
+    // 2) 归档新条目
+    let newContent = updateFrontmatter(content, {
+      status: 'active',
+      supersedes: targetKi,
+      conflict_note: conflictNote || undefined,
+    });
+    newContent = newContent.replace(/^draft:\s*true\s*$/m, '').replace(/^\s*-\s*$/m, '');
+
+    if (!fs.existsSync(p.memoryDir)) fs.mkdirSync(p.memoryDir, { recursive: true });
+    const filepath = path.join(p.memoryDir, finalFilename);
+    fs.writeFileSync(filepath, newContent, 'utf8');
+    try { fs.unlinkSync(draftPath); } catch { /* ignore */ }
+
+    // 3) 索引与向量化
+    db.open(p.db);
+    db.scanMemoryDir([p.root, p.memoryDir, path.dirname(targetFile)], p.level);
+    search.invalidateScope();
+
+    if (options.embed !== false) {
+      embedDocument(targetFile, { level: p.level, cwd: p.cwd, config: cfg }).catch(() => {});
+      embedDocument(filepath, { level: p.level, cwd: p.cwd, config: cfg }).catch(() => {});
+    }
+
+    return { ok: true, level: p.level, action: 'supersede', filepath, id, supersededTarget: targetKi };
+  }
+
+  // 分支 3: 默认新建独立条目 (create_new)
+  let cleaned = updateFrontmatter(content, {
+    status: 'active',
+  });
+  cleaned = cleaned.replace(/^draft:\s*true\s*$/m, '').replace(/^\s*-\s*$/m, '');
+
   if (!fs.existsSync(p.memoryDir)) fs.mkdirSync(p.memoryDir, { recursive: true });
-  const filepath = path.join(p.memoryDir, path.basename(draftPath));
+  const filepath = path.join(p.memoryDir, finalFilename);
   fs.writeFileSync(filepath, cleaned, 'utf8');
   try {
     fs.unlinkSync(draftPath);
   } catch { /* 草稿可能已手动移动 */ }
+
   // 增量索引
   db.open(p.db);
   db.scanMemoryDir([p.root, p.memoryDir], p.level);
   search.invalidateScope();
+
   // 后台向量化
   if (options.embed !== false) {
-    embedDocument(filepath, { level: p.level, cwd: p.cwd, config: init(options.config) }).catch(() => {});
+    embedDocument(filepath, { level: p.level, cwd: p.cwd, config: cfg }).catch(() => {});
   }
-  return { ok: true, level: p.level, filepath, id };
+  return { ok: true, level: p.level, action: 'create_new', filepath, id };
 }
 
 /**
@@ -335,6 +575,66 @@ async function repairVectors(options = {}) {
   return { level: p.level, scanned, affected, staleRows, reembedded, deleted, dryRun };
 }
 
+/**
+ * 执行结构化巡检 (Layer 1)
+ * @param {{level?:string, cwd?:string, config?:object}} [options]
+ */
+function lintStructure(options = {}) {
+  return lint.lintStructure({ ...options, config: init(options.config) });
+}
+
+/**
+ * 执行语义审计巡检 (Layer 2)
+ * @param {{level?:string, cwd?:string, config?:object}} [options]
+ */
+async function lintSemantic(options = {}) {
+  return lint.lintSemantic({ ...options, config: init(options.config) });
+}
+
+/**
+ * 执行自愈修复 (--fix)
+ * @param {Array<object>} issues
+ * @param {{level?:string, cwd?:string, config?:object}} [options]
+ */
+function autoFix(issues, options = {}) {
+  return lint.autoFix(issues, { ...options, config: init(options.config) });
+}
+
+/**
+ * 完整巡检某级别或多级别
+ * @param {{level?:string, deep?:boolean, fix?:boolean, cwd?:string, config?:object}} [options]
+ */
+async function lintAll(options = {}) {
+  const cfg = init(options.config);
+  const cwd = options.cwd || null;
+  const target = options.level || 'auto';
+  const levels = target === 'auto'
+    ? paths.listLevels(cwd, cfg).filter((l) => l.enabled).map((l) => l.level)
+    : [paths.normalizeLevel(target)];
+
+  const results = [];
+  for (const lv of levels) {
+    const structRes = lint.lintStructure({ level: lv, cwd, config: cfg });
+    let semanticRes = null;
+    if (options.deep) {
+      semanticRes = await lint.lintSemantic({ level: lv, cwd, config: cfg });
+    }
+    const allIssues = [...structRes.issues, ...(semanticRes ? semanticRes.issues : [])];
+    let fixRes = null;
+    if (options.fix && allIssues.length > 0) {
+      fixRes = lint.autoFix(allIssues, { level: lv, cwd, config: cfg });
+    }
+    results.push({
+      level: lv,
+      structure: structRes,
+      semantic: semanticRes,
+      issues: allIssues,
+      fix: fixRes,
+    });
+  }
+  return results;
+}
+
 /** 关闭所有资源(进程退出时调用) */
 function close() {
   embed.flush();
@@ -354,6 +654,10 @@ module.exports = {
   record,
   createPostmortemDraft,
   confirmDraft,
+  lintStructure,
+  lintSemantic,
+  autoFix,
+  lintAll,
   stats,
   statsAll,
   close,
@@ -364,4 +668,5 @@ module.exports = {
   search,
   render,
   postmortem,
+  lint,
 };

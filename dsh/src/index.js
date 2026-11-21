@@ -15,14 +15,16 @@ import Schema from '@deepseek-ai/schemastery';
 import { registerTools } from './tools.js';
 import { registerCommands } from './commands.js';
 import { registerHook } from './hooks.js';
-import { yongle } from './util.js';
+import { yongle, yongleConfig } from './util.js';
 
 export const name = 'yongle-dadian-dsh';
 
-/** 依赖:tools 与 commands 服务(dsh-base 提供,web/headless 组合均存在) */
-export const inject = ['tools', 'commands'];
+
+/** 依赖:tools, commands, webServer 服务 */
+export const inject = ['tools', 'commands', 'webServer'];
 
 export const Config = Schema.object({
+
   // 检索输出(Token 优化)
   maxResults: Schema.number().default(5).description('tool 默认返回条数(1-10)'),
   snippetChars: Schema.number().default(140).description('摘要最大字符数(约 70-140 token)'),
@@ -71,43 +73,212 @@ export function apply(ctx, config) {
     });
   }
 
-  // 状态 API 路由: 供前端 conversation.composer.dock 挂件拉取知识库实时数据
+  // 状态与可视化管理 API 路由: 供前端设置面板与底栏挂件拉取及更新知识库配置与状态
   if (typeof ctx?.inject === 'function') {
     ctx.inject(['webServer'], (webCtx) => {
-      webCtx.effect(() => webCtx.webServer.register({
-        kind: 'exact',
-        path: '/yongle/stats',
-        async handler(req, res) {
+      function sendJson(res, statusCode, data) {
+        const body = JSON.stringify(data);
+        res.writeHead(statusCode, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Content-Length': Buffer.byteLength(body),
+        });
+        res.end(body);
+      }
+
+      function readJsonBody(req) {
+        return new Promise((resolve, reject) => {
+          let raw = '';
+          let settled = false;
+          const cleanup = () => {
+            req.removeListener('data', onData);
+            req.removeListener('end', onEnd);
+            req.removeListener('error', onError);
+          };
+          const onData = (chunk) => {
+            if (settled) return;
+            raw += chunk;
+            if (raw.length > 1024 * 1024) {
+              settled = true;
+              cleanup();
+              if (typeof req.destroy === 'function') req.destroy();
+              reject(new Error('Payload too large'));
+            }
+          };
+          const onEnd = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            try {
+              resolve(raw ? JSON.parse(raw) : {});
+            } catch (err) {
+              reject(new Error('Invalid JSON body: ' + err.message));
+            }
+          };
+          const onError = (err) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            reject(err);
+          };
+          req.on('data', onData);
+          req.on('end', onEnd);
+          req.on('error', onError);
+        });
+      }
+
+      async function routeHandler(req, res) {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          });
+          res.end();
+          return;
+        }
+
+        const url = new URL(req.url || '/', 'http://127.0.0.1');
+        const cleanPath = url.pathname.replace(/^\/api/, '').replace(/\/+$/, '');
+
+        // 1. 全景状态看板 API (/yongle/stats)
+        if (cleanPath === '/yongle/stats') {
           if (req.method === 'GET') {
             try {
               const all = yongle.statsAll({ config });
-              const embedding = config.embedding?.enabled === false ? 'disabled (fts-only)' : (config.embedding?.provider || 'default');
+              const currentCfg = yongleConfig.loadMergedConfig();
+              const embedding = config.embedding?.enabled === false ? 'disabled (fts-only)' : (config.embedding?.provider || currentCfg.embedding?.provider || 'ollama');
+              const model = config.embedding?.model || currentCfg.embedding?.model || 'nomic-embed-text';
               const data = {
                 ok: true,
                 stats: all,
                 embedding: {
                   provider: embedding,
-                  model: config.embedding?.model || 'default',
+                  model,
+                  enabled: config.embedding?.enabled !== false,
                 },
+                config: currentCfg,
                 autoPostmortem: !!config.autoPostmortem,
+                globalConfigPath: yongleConfig.globalConfigPath,
               };
-              res.writeHead(200, {
-                'Content-Type': 'application/json; charset=utf-8',
-                'Cache-Control': 'no-store',
-              });
-              res.end(JSON.stringify(data));
+              sendJson(res, 200, data);
             } catch (err) {
-              res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
-              res.end(JSON.stringify({ ok: false, error: String(err?.message || err) }));
+              sendJson(res, 500, { ok: false, error: String(err?.message || err) });
             }
             return;
           }
-          res.writeHead(405, { Allow: 'GET' });
-          res.end();
-        },
-      }), 'yongle: stats route');
+          sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+          return;
+        }
+
+        // 2. 配置读取与保存 API (/yongle/config)
+        if (cleanPath === '/yongle/config') {
+          if (req.method === 'GET') {
+            try {
+              const currentCfg = yongleConfig.loadMergedConfig();
+              sendJson(res, 200, {
+                ok: true,
+                config: currentCfg,
+                globalConfigPath: yongleConfig.globalConfigPath,
+              });
+            } catch (err) {
+              sendJson(res, 500, { ok: false, error: String(err?.message || err) });
+            }
+            return;
+          }
+          if (req.method === 'POST') {
+            try {
+              const body = await readJsonBody(req);
+              const targetConfig = body.config || body;
+              const saved = yongleConfig.saveGlobalConfig(targetConfig);
+              sendJson(res, 200, {
+                ok: true,
+                message: '全局配置已成功保存至 ' + yongleConfig.globalConfigPath,
+                config: saved,
+              });
+            } catch (err) {
+              sendJson(res, 400, { ok: false, error: String(err?.message || err) });
+            }
+            return;
+          }
+          sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+          return;
+        }
+
+        // 3. 一键全量索引重建 API (/yongle/reindex)
+        if (cleanPath === '/yongle/reindex') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+            return;
+          }
+          try {
+            const userReindex = yongle.reindex({ level: 'user' });
+            let projReindex = null;
+            try {
+              projReindex = yongle.reindex({ level: 'project' });
+            } catch {}
+            const updatedStats = yongle.statsAll({ config });
+            sendJson(res, 200, {
+              ok: true,
+              message: '知识库索引重建成功！',
+              user: userReindex,
+              project: projReindex,
+              stats: updatedStats,
+            });
+          } catch (err) {
+            sendJson(res, 500, { ok: false, error: String(err?.message || err) });
+          }
+          return;
+        }
+
+        // 4. 知识库自愈巡检 API (/yongle/repair)
+        if (cleanPath === '/yongle/repair') {
+          if (req.method !== 'POST') {
+            sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+            return;
+          }
+          try {
+            const lintResults = await yongle.lintAll({ fix: true, config });
+            const updatedStats = yongle.statsAll({ config });
+            sendJson(res, 200, {
+              ok: true,
+              message: '知识库健康巡检与格式自愈完成！',
+              results: lintResults,
+              stats: updatedStats,
+            });
+          } catch (err) {
+            sendJson(res, 500, { ok: false, error: String(err?.message || err) });
+          }
+          return;
+        }
+
+        sendJson(res, 404, { ok: false, error: 'Not Found' });
+      }
+
+      // 同时注册 /yongle 与 /api/yongle 两个前缀路由
+      webCtx.effect(() => {
+        const d1 = webCtx.webServer.register({
+          kind: 'prefix',
+          path: '/yongle',
+          handler: routeHandler,
+        });
+        const d2 = webCtx.webServer.register({
+          kind: 'prefix',
+          path: '/api/yongle',
+          handler: routeHandler,
+        });
+        return () => {
+          d1();
+          d2();
+        };
+      }, 'yongle: webServer routes');
     });
   }
 
+
   ctx.logger?.info?.('[yongle] plugin loaded: tools + commands + hooks + web routes registered');
 }
+

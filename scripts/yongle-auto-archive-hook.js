@@ -22,15 +22,18 @@ process.stdin.on('end', () => {
     const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
     const combinedNodePath = [nodeModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
 
-    // 无论是何种 Hook 事件，无条件触发梦境守护者 (Dreamer) 静默检查
-    const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
-    if (fs.existsSync(dreamerScript)) {
-      const dreamerChild = spawn('node', [dreamerScript, '--once'], {
-        detached: true,
-        stdio: 'ignore',
-        env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
-      });
-      dreamerChild.unref();
+    // 仅在回合结束 (Stop) 时触发后台梦境检查与归档，避免 PostInvocation 每次工具调用都派生子进程
+    if (payload.hookEventName === 'Stop') {
+      const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
+      if (fs.existsSync(dreamerScript)) {
+        const dreamerChild = spawn('node', [dreamerScript, '--once'], {
+          detached: true,
+          windowsHide: true,
+          stdio: 'ignore',
+          env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
+        });
+        dreamerChild.unref();
+      }
     }
 
     function getLatestTranscriptPath() {
@@ -60,13 +63,14 @@ process.stdin.on('end', () => {
       || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null)
       || getLatestTranscriptPath();
 
-    // 只要能推导出存在的 transcriptPath 且未显式指定 fullyIdle 为 false，即触发归档检查
-    if (transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false) {
+    // 仅在 Stop 事件且 fullyIdle !== false 时触发后台归档进程
+    if (payload.hookEventName === 'Stop' && transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false) {
       const archiverScript = path.join(__dirname, 'yongle-bg-archiver.js');
       
-      // 以 Detached (脱机) 模式启动后台归档进程，并切断 stdio 防止阻塞当前进程
+      // 以 Detached (脱机) + windowsHide 模式启动后台归档进程，防止 Windows 弹出黑框窗口
       const child = spawn('node', [archiverScript, transcriptPath], {
         detached: true,
+        windowsHide: true,
         stdio: 'ignore',
         env: { ...process.env, YONGLE_RUNTIME: 'antigravity', NODE_PATH: combinedNodePath }
       });
@@ -81,10 +85,11 @@ process.stdin.on('end', () => {
       });
     }
     
-    // Stop 钩子一般不需要返回任何操作（直接输出空或原样放行）
-    console.log(JSON.stringify({ decision: "continue" }));
+    // Stop 钩子中 "continue" 表示阻止停止并重入循环，"allow" 表示正常允许结束；其他钩子返回空对象 {}
+    const out = payload && payload.hookEventName === 'Stop' ? { decision: 'allow' } : {};
+    console.log(JSON.stringify(out));
   } catch (error) {
     // 静默失败，绝对不能阻塞主线
-    console.log(JSON.stringify({ decision: "continue" }));
+    console.log(JSON.stringify({}));
   }
 });

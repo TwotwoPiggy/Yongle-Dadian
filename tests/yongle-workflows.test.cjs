@@ -17,6 +17,7 @@ const EXPECTED_WORKFLOWS = [
   'yongle-tag.md',
   'yongle-reindex.md',
   'yongle-check-dream.md',
+  'yongle-lint.md',
 ];
 
 const EXPECTED_COMMANDS = [
@@ -27,6 +28,7 @@ const EXPECTED_COMMANDS = [
   'tag.md',
   'reindex.md',
   'sync.md',
+  'lint.md',
 ];
 
 describe('yongle workflows', () => {
