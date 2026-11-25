@@ -8,7 +8,7 @@
 
 > **“知识就是力量，但只有能被迅速找回的知识才是生产力。”**
 
-在人类开发者与 AI Agent（如 Antigravity, Claude Code, Gemini CLI, Cursor, Trae 等）进行结对编程（Pair Programming）的过程中，最常见的痛点是：
+在人类开发者与 AI Agent（如 Antigravity, VS Code Copilot, Claude Code, Gemini CLI, Cursor, Trae 等）进行结对编程（Pair Programming）的过程中，最常见的痛点是：
 1. **重复踩坑**：相同的 Bug、环境配置问题、甚至代码库的设计局限性，在多次 Reset 会话或开启新对话后被 AI 一犯再犯。
 2. **上下文流失**：长对话中沉淀下来的“完美解决方案”和“关键决策（Key Decisions）”随着会话归档或 Token 限制而丢失，无法跨越会话继承。
 3. **传统的检索无能**：基于简单的关键词搜索（Grepping/FTS5）很容易因为语义表达不同（如输入“乱码”却搜不到带有“encoding”的笔记）而完美错过正确经验。
@@ -103,14 +103,18 @@ graph TD
 
 ### 3. 安装与配置说明
 
-支持丰富的 AI Agent 宿主环境（例如 `--antigravity`, `--gemini`, `--claude`, `--cursor`, `--windsurf`, `--trae`, `--trae-cn`, `--catpawai`, `--qoder` 等）：
+支持丰富的 AI Agent 宿主环境（例如 `--antigravity`, `--copilot`（兼容 `--vscode-copilot` / `--vscode`）, `--gemini`, `--claude`, `--cursor`, `--windsurf`, `--trae`, `--trae-cn`, `--catpawai`, `--qoder` 等）：
 
 #### 📦 途径 A：通过 npm 全局安装（推荐）
 ```powershell
 npx yongle-dadian --global --antigravity
+# VS Code Copilot 全局安装（写入 ~/.copilot/skills、hooks、instructions）:
+npx yongle-dadian --global --copilot
+# VS Code Copilot 项目级安装（写入 .github/skills、hooks、instructions）:
+npx yongle-dadian --local --copilot
 # 或针对其他运行时: npx yongle-dadian --global --trae-cn
 ```
-*这会自动将永乐大典注册到你的系统环境变量及宿主 Agent 工作流中。*
+*这会自动将永乐大典注册到你的系统环境变量及宿主 Agent 工作流中。对于 **VS Code Copilot**，安装器会自动注入 Agent Skills（支持 `/yongle-search`、`/yongle-postmortem`、`/yongle-manage` 斜杠命令及按需自动激活）、Agent Hooks（`UserPromptSubmit` / `PostToolUse` 自动检索历史经验、`Stop` 后台静默归档与梦境检查）以及 Custom Instructions 协同指引。*
 
 #### 🔧 途径 B：本地源码安装（适合定制开发）
 1. 克隆仓库：
@@ -369,7 +373,7 @@ dsh --profile web
 
 > **"Knowledge is power, but only knowledge that can be quickly retrieved is productivity."**
 
-When human developers pair-program with AI Agents (such as Antigravity, Claude Code, Gemini CLI, Cursor, Trae, etc.), the most common pain points are:
+When human developers pair-program with AI Agents (such as Antigravity, VS Code Copilot, Claude Code, Gemini CLI, Cursor, Trae, etc.), the most common pain points are:
 1. **Repeating Bugs**: The same environment configurations, API quirks, or codebase design limits are repeatedly forgotten and re-violated by AI whenever a session is reset or a new chat begins.
 2. **Context Loss**: Great solutions and key decisions synthesized during long sessions are eventually lost due to archival or context token window limits, never inherited across chats.
 3. **Keyword-search Inefficiency**: Traditional FTS (Full-Text Search) fails to return relevant matches when the semantic expression differs (e.g., searching for "encoding issue" misses a document containing only "garbled characters").
@@ -458,8 +462,10 @@ Two installation pathways are supported:
 #### 📦 Approach A: Global CLI Installation via npm (Recommended)
 ```powershell
 npx yongle-dadian --global --antigravity
+# For VS Code Copilot (global: ~/.copilot/ ; or --local for .github/):
+npx yongle-dadian --global --copilot
 ```
-*This registers all workflows and environments to your system globally.*
+*This registers all skills, workflows, hooks, and instructions to your target AI agent runtime (VS Code Copilot also accepts `--vscode-copilot` and `--vscode` aliases, installing Agent Skills, Agent Hooks for `UserPromptSubmit`/`PostToolUse`/`Stop`, and Custom Instructions).*
 
 #### 🔧 Approach B: Local Source Installation (For Custom Hacking)
 1. Clone the repository:

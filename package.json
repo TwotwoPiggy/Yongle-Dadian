@@ -1,6 +1,6 @@
 {
   "name": "yongle-dadian",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "永乐大典 — AI 开发经验知识库引擎。自动复盘、过程追踪、毫秒级检索。独立于 GSD 运行。",
   "repository": {
     "type": "git",
@@ -25,7 +25,10 @@
     "developer-experience",
     "antigravity",
     "gemini",
-    "claude"
+    "claude",
+    "copilot",
+    "vscode",
+    "github-copilot"
   ],
   "author": "Lemony",
   "license": "MIT",

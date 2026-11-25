@@ -1,95 +1,184 @@
+'use strict';
+
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
-let inputData = '';
-process.stdin.on('data', chunk => {
-  inputData += chunk;
-});
+function getRuntimeArg(argv = process.argv) {
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg.startsWith('--runtime=')) return arg.slice('--runtime='.length).toLowerCase();
+    if (arg === '--runtime' && argv[i + 1]) return String(argv[i + 1]).toLowerCase();
+  }
+  return '';
+}
 
-process.stdin.on('end', () => {
-  try {
+function resolvePackageRoot() {
+  if (process.env.YONGLE_INSTALL_DIR && fs.existsSync(process.env.YONGLE_INSTALL_DIR)) {
+    return process.env.YONGLE_INSTALL_DIR;
+  }
+  if (fs.existsSync(path.join(__dirname, '..', 'package.json'))) {
+    return path.resolve(__dirname, '..');
+  }
+  const manifestCandidates = [
+    path.join(__dirname, '..', 'install-manifest.json'),
+    path.join(__dirname, '..', 'yongle', 'install-manifest.json'),
+  ];
+  for (const manifestPath of manifestCandidates) {
     try {
-      const logDir = 'C:/Users/Lemony/.yongle_knowledge/logs';
-      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-      fs.appendFileSync(path.join(logDir, 'hook_debug.log'), `${new Date().toISOString()} Input: ${inputData}\n`);
+      if (fs.existsSync(manifestPath)) {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        if (manifest.source && fs.existsSync(manifest.source)) {
+          return manifest.source;
+        }
+      }
     } catch (e) {}
+  }
+  return path.resolve(__dirname, '..');
+}
 
-    let payload = {};
-    try { payload = JSON.parse(inputData); } catch (e) {}
-    
-    const repoModulesDir = 'D:/Computers/AIDevelop/Tools/Skills/yongle-dadian/node_modules';
-    const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
-    const combinedNodePath = [nodeModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+function resolveScript(scriptName, packageRoot) {
+  const pkgScript = path.join(packageRoot, 'scripts', scriptName);
+  if (fs.existsSync(pkgScript)) return pkgScript;
+  const localScript = path.join(__dirname, scriptName);
+  if (fs.existsSync(localScript)) return localScript;
+  return null;
+}
 
-    // 仅在回合结束 (Stop) 时触发后台梦境检查与归档，避免 PostInvocation 每次工具调用都派生子进程
-    if (payload.hookEventName === 'Stop') {
-      const dreamerScript = path.join(__dirname, 'yongle-dreamer.js');
-      if (fs.existsSync(dreamerScript)) {
-        const dreamerChild = spawn('node', [dreamerScript, '--once'], {
-          detached: true,
-          windowsHide: true,
-          stdio: 'ignore',
-          env: { ...process.env, YONGLE_RUNTIME: 'antigravity', ANTIGRAVITY_AGENT: '1', NODE_PATH: combinedNodePath }
-        });
-        dreamerChild.unref();
+function getLatestAntigravityTranscriptPath() {
+  try {
+    const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
+    if (!fs.existsSync(brainDir)) return null;
+    const sessions = fs.readdirSync(brainDir);
+    let latestPath = null;
+    let latestMtime = 0;
+    for (const sid of sessions) {
+      const logFile = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
+      if (fs.existsSync(logFile)) {
+        const mtime = fs.statSync(logFile).mtimeMs;
+        if (mtime > latestMtime) {
+          latestMtime = mtime;
+          latestPath = logFile;
+        }
       }
     }
+    return latestPath;
+  } catch (e) {
+    return null;
+  }
+}
 
-    function getLatestTranscriptPath() {
-      try {
-        const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
-        if (!fs.existsSync(brainDir)) return null;
-        const sessions = fs.readdirSync(brainDir);
-        let latestPath = null;
-        let latestMtime = 0;
-        for (const sid of sessions) {
-          const logFile = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
-          if (fs.existsSync(logFile)) {
-            const mtime = fs.statSync(logFile).mtimeMs;
-            if (mtime > latestMtime) {
-              latestMtime = mtime;
-              latestPath = logFile;
-            }
-          }
-        }
-        return latestPath;
-      } catch (e) { return null; }
-    }
+function handleArchiveHook(payload, options = {}) {
+  const runtimeArg = options.runtimeArg !== undefined ? options.runtimeArg : getRuntimeArg(process.argv);
+  const eventName = payload.hookEventName || payload.hook_event_name || '';
+  const isStop = eventName === 'Stop' || eventName === 'agentStop' || eventName === 'stop';
+  const isCopilot = runtimeArg === 'copilot' || Boolean(payload.hook_event_name) || eventName === 'agentStop';
 
-    // 兼容 transcript_path (蛇形), transcriptPath (驼峰), session_id 推导, 以及自动扫描最新日志保底
-    const transcriptPath = payload.transcript_path 
-      || payload.transcriptPath 
-      || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null)
-      || getLatestTranscriptPath();
+  // VS Code Copilot Stop hook 防重入守卫：若已在强制继续循环中，直接放行
+  if (isCopilot && payload.stop_hook_active === true) {
+    return {};
+  }
 
-    // 仅在 Stop 事件且 fullyIdle !== false 时触发后台归档进程
-    if (payload.hookEventName === 'Stop' && transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false) {
-      const archiverScript = path.join(__dirname, 'yongle-bg-archiver.js');
-      
-      // 以 Detached (脱机) + windowsHide 模式启动后台归档进程，防止 Windows 弹出黑框窗口
-      const child = spawn('node', [archiverScript, transcriptPath], {
+  const packageRoot = resolvePackageRoot();
+  const repoModulesDir = path.join(packageRoot, 'node_modules');
+  const localModulesDir = path.join(__dirname, '..', 'node_modules');
+  const combinedNodePath = [localModulesDir, repoModulesDir, process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+  const workDir = payload.cwd && fs.existsSync(payload.cwd) ? payload.cwd : process.cwd();
+  const spawnFn = options.spawn || spawn;
+
+  const childEnv = {
+    ...process.env,
+    YONGLE_RUNTIME: isCopilot ? 'copilot' : 'antigravity',
+    NODE_PATH: combinedNodePath,
+  };
+  if (isCopilot) {
+    delete childEnv.ANTIGRAVITY_AGENT;
+  } else {
+    childEnv.ANTIGRAVITY_AGENT = '1';
+  }
+
+  // 仅在回合结束 (Stop) 时触发后台梦境检查与归档
+  if (isStop && !options.skipSpawn) {
+    const dreamerScript = resolveScript('yongle-dreamer.js', packageRoot);
+    if (dreamerScript) {
+      const dreamerChild = spawnFn(process.execPath, [dreamerScript, '--once'], {
+        cwd: workDir,
         detached: true,
         windowsHide: true,
         stdio: 'ignore',
-        env: { ...process.env, YONGLE_RUNTIME: 'antigravity', NODE_PATH: combinedNodePath }
+        env: childEnv,
       });
-      
-      child.unref(); // 让当前 Hook 脚本可以立刻退出
+      if (dreamerChild && typeof dreamerChild.unref === 'function') dreamerChild.unref();
+    }
+  }
 
-      const { logAutoFeature } = require('./yongle-logger');
-      logAutoFeature({
+  // Copilot 仅使用 payload 提供的 transcript_path，避免误扫 Antigravity 日志目录
+  const transcriptPath = isCopilot
+    ? (payload.transcript_path || payload.transcriptPath || null)
+    : (payload.transcript_path
+      || payload.transcriptPath
+      || (payload.session_id ? path.join(os.homedir(), '.gemini', 'antigravity', 'brain', payload.session_id, '.system_generated', 'logs', 'transcript.jsonl') : null)
+      || getLatestAntigravityTranscriptPath());
+
+  if (isStop && transcriptPath && fs.existsSync(transcriptPath) && payload.fullyIdle !== false && !options.skipSpawn) {
+    const archiverScript = resolveScript('yongle-bg-archiver.js', packageRoot);
+    if (archiverScript) {
+      const child = spawnFn(process.execPath, [archiverScript, transcriptPath], {
+        cwd: workDir,
+        detached: true,
+        windowsHide: true,
+        stdio: 'ignore',
+        env: childEnv,
+      });
+      if (child && typeof child.unref === 'function') child.unref();
+
+      const logFn = options.logAutoFeature || require('./yongle-logger').logAutoFeature;
+      logFn({
         feature: 'auto-archive',
         status: 'RUNNING',
-        details: '已触发脱机后台归档进程'
+        details: `已触发脱机后台归档进程 (${isCopilot ? 'copilot' : 'antigravity'})`,
       });
     }
-    
-    // Stop 钩子中 "continue" 表示阻止停止并重入循环，"allow" 表示正常允许结束；其他钩子返回空对象 {}
-    const out = payload && payload.hookEventName === 'Stop' ? { decision: 'allow' } : {};
-    console.log(JSON.stringify(out));
-  } catch (error) {
-    // 静默失败，绝对不能阻塞主线
-    console.log(JSON.stringify({}));
   }
-});
+
+  // Copilot Stop hook 返回空对象 {} 表示允许正常停止；Antigravity 保持 { decision: 'allow' }
+  if (isCopilot) {
+    return {};
+  }
+  return isStop ? { decision: 'allow' } : {};
+}
+
+if (require.main === module) {
+  let inputData = '';
+  process.stdin.on('data', chunk => {
+    inputData += chunk;
+  });
+
+  process.stdin.on('end', () => {
+    try {
+      try {
+        const logDir = path.join(os.homedir(), '.yongle_knowledge', 'logs');
+        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        fs.appendFileSync(path.join(logDir, 'hook_debug.log'), `${new Date().toISOString()} Input: ${inputData}\n`);
+      } catch (e) {}
+
+      let payload = {};
+      try {
+        if (inputData.trim()) payload = JSON.parse(inputData);
+      } catch (e) {}
+
+      const out = handleArchiveHook(payload);
+      console.log(JSON.stringify(out));
+    } catch (error) {
+      // 静默失败，绝对不能阻塞主线
+      console.log(JSON.stringify({}));
+    }
+  });
+}
+
+module.exports = {
+  getRuntimeArg,
+  resolvePackageRoot,
+  handleArchiveHook,
+};

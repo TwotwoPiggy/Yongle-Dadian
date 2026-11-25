@@ -45,6 +45,7 @@ function getGlobalDir(runtime) {
     antigravity: path.join(home, '.gemini', 'antigravity'),
     gemini: path.join(home, '.gemini'),
     claude: path.join(home, '.claude'),
+    copilot: path.join(home, '.copilot'),
     opencode: path.join(home, '.config', 'opencode'),
     kilo: path.join(home, '.config', 'kilo'),
     cursor: path.join(home, '.cursor'),
@@ -307,7 +308,7 @@ function main() {
   // ──────────────────────────────────────────────────────────
   console.log(`  ${cyan}[4/4]${reset} ${bold}正在为运行中的 AI 代理重新注入技能...${reset}`);
   
-  const runtimes = ['antigravity', 'gemini', 'claude', 'opencode', 'kilo', 'cursor', 'windsurf', 'trae', 'catpawai', 'trae-cn', 'qoder'];
+  const runtimes = ['antigravity', 'gemini', 'claude', 'copilot', 'opencode', 'kilo', 'cursor', 'windsurf', 'trae', 'catpawai', 'trae-cn', 'qoder'];
   let recheckCount = 0;
   
   for (const rt of runtimes) {
@@ -356,7 +357,7 @@ function main() {
   console.log(`  ║    ${green}✓ 更新成功！${cyan} 永乐大典已升级到最新版  ║`);
   console.log('  ╚═══════════════════════════════════════╝' + reset);
   console.log(`\n  当前版本: ${green}v${newPkg.version}${reset}`);
-  console.log(`  ${yellow}▸ 提示: 请重启您的 AI Agent (如 Antigravity 或 Claude) 以完成升级。${reset}\n`);
+  console.log(`  ${yellow}▸ 提示: 请重启您的 AI Agent (如 Antigravity、VS Code Copilot 或 Claude) 以完成升级。${reset}\n`);
 }
 
 // ─── 回滚函数 ───────────────────────────────────────────────

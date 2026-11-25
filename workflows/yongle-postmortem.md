@@ -13,7 +13,7 @@ resolution_type: "<类型>"                       # 分类: bug-fix | config-fix
 tags:                                           # 技术栈与领域标签
   - "<tag1>"
   - "<tag2>"
-host_agent: "<Agent名称>"                       # 执行解决方案的AI Agent: antigravity | codex | cursor | other
+host_agent: "<Agent名称>"                       # 执行解决方案的AI Agent: antigravity | copilot | codex | cursor | claude | other
 cause_summary: "<一句话精炼根因>"               # 30字以内，直接说明问题本质
 ---
 ```
@@ -269,6 +269,6 @@ fi
 - 默认采用一步直达归档机制，单次确认即直接落盘，极大降低交互摩擦
 - 依然保留“存为草稿”分支，满足需要精细化人工修订的高定制场景
 - 支持 auto_confirm 配置与 -y / --yes 参数，满足全自动流水线或工兵调用需求
-- 上下文回溯由宿主大模型（如 Antigravity）直接执行，无需额外 API 开销
+- 上下文回溯由宿主大模型（如 Antigravity、VS Code Copilot、Claude Code）直接执行，无需额外 API 开销
 - 所有文件写入操作均通过系统工具（Bash/Write）完成，不依赖多余 npm 包
 </notes>

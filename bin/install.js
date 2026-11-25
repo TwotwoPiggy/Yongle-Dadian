@@ -5,7 +5,9 @@
  * 
  * 用法:
  *   npx yongle-dadian --global --antigravity
+ *   npx yongle-dadian --global --copilot
  *   node bin/install.js --global --antigravity
+ *   node bin/install.js --local --copilot
  *   node bin/install.js --local --claude
  *   node bin/install.js --uninstall --antigravity --global
  */
@@ -53,6 +55,7 @@ const runtimeFlags = {
   antigravity: args.includes('--antigravity'),
   gemini: args.includes('--gemini'),
   claude: args.includes('--claude'),
+  copilot: args.includes('--copilot') || args.includes('--vscode-copilot') || args.includes('--vscode'),
   opencode: args.includes('--opencode'),
   kilo: args.includes('--kilo'),
   cursor: args.includes('--cursor'),
@@ -83,6 +86,7 @@ if (hasHelp) {
   console.log(`    ${cyan}--antigravity${reset}       Target Antigravity runtime`);
   console.log(`    ${cyan}--gemini${reset}            Target Gemini CLI runtime`);
   console.log(`    ${cyan}--claude${reset}            Target Claude Code runtime`);
+  console.log(`    ${cyan}--copilot${reset}           Target VS Code Copilot runtime (aliases: --vscode-copilot, --vscode)`);
   console.log(`    ${cyan}--opencode${reset}          Target OpenCode runtime`);
   console.log(`    ${cyan}--kilo${reset}              Target Kilo runtime`);
   console.log(`    ${cyan}--cursor${reset}            Target Cursor runtime`);
@@ -98,6 +102,10 @@ if (hasHelp) {
   console.log(`  ${yellow}Examples:${reset}`);
   console.log(`    ${dim}# Install for Antigravity globally${reset}`);
   console.log(`    npx yongle-dadian --antigravity --global\n`);
+  console.log(`    ${dim}# Install for VS Code Copilot globally${reset}`);
+  console.log(`    npx yongle-dadian --copilot --global\n`);
+  console.log(`    ${dim}# Install locally for VS Code Copilot (.github/)${reset}`);
+  console.log(`    npx yongle-dadian --copilot --local\n`);
   console.log(`    ${dim}# Install locally for Claude Code${reset}`);
   console.log(`    npx yongle-dadian --claude --local\n`);
   console.log(`    ${dim}# Uninstall from Antigravity${reset}`);
@@ -113,7 +121,7 @@ if (!hasGlobal && !hasLocal) {
   process.exit(1);
 }
 if (selectedRuntimes.length === 0) {
-  console.error(`  ${red}✗${reset} Please specify a runtime (e.g. --antigravity, --gemini, --claude)\n`);
+  console.error(`  ${red}✗${reset} Please specify a runtime (e.g. --antigravity, --copilot, --gemini, --claude)\n`);
   process.exit(1);
 }
 
@@ -124,6 +132,7 @@ function getGlobalDir(runtime) {
     antigravity: path.join(home, '.gemini', 'antigravity'),
     gemini: path.join(home, '.gemini'),
     claude: path.join(home, '.claude'),
+    copilot: path.join(home, '.copilot'),
     opencode: path.join(home, '.config', 'opencode'),
     kilo: path.join(home, '.config', 'kilo'),
     cursor: path.join(home, '.cursor'),
@@ -141,6 +150,7 @@ function getLocalDir(runtime) {
     antigravity: '.agent',
     gemini: '.gemini',
     claude: '.claude',
+    copilot: '.github',
     opencode: '.opencode',
     kilo: '.kilo',
     cursor: '.cursor',
@@ -272,6 +282,26 @@ const YONGLE_SCRIPTS = [
   'yongle-confirm.js',
 ];
 
+const COPILOT_HOOK_FILENAME = 'yongle.json';
+const COPILOT_INSTRUCTIONS_FILENAME = 'yongle.instructions.md';
+
+function buildCopilotInstructions() {
+  return [
+    '---',
+    "description: '永乐大典 (Yongle Dadian) 长期记忆与排错经验检索协同指引'",
+    "applyTo: '**'",
+    '---',
+    '',
+    '# 永乐大典 (Yongle Dadian) 协同指引',
+    '',
+    '本环境已安装「永乐大典」AI 开发经验知识库技能：',
+    '- **遇错先查**：遇到报错、环境异常、构建失败或重复踩坑时，优先调用 `yongle-search` 技能（或运行 `/yongle-search`）检索历史经验与既有方案。',
+    '- **排错沉淀**：成功解决非平凡 Bug 或完成关键架构决策后，如用户需要沉淀经验，调用 `yongle-postmortem` 技能（或提示用户使用 `/yongle-postmortem`）归档。',
+    '- **运维管理**：查看自动化状态、巡检、重建索引、同步或更新时，调用 `yongle-manage` 技能（`/yongle-manage`）。',
+    '',
+  ].join('\n');
+}
+
 function installForRuntime(runtime) {
   const configDir = hasGlobal ? getGlobalDir(runtime) : getLocalDir(runtime);
   console.log(`  ${cyan}▸${reset} Installing for ${bold}${runtime}${reset} → ${dim}${configDir}${reset}`);
@@ -334,6 +364,10 @@ function installForRuntime(runtime) {
     workflows: YONGLE_WORKFLOWS,
     scripts: YONGLE_SCRIPTS,
   };
+  if (runtime === 'copilot') {
+    manifest.hooks = [path.posix.join('hooks', COPILOT_HOOK_FILENAME)];
+    manifest.instructions = [path.posix.join('instructions', COPILOT_INSTRUCTIONS_FILENAME)];
+  }
   fs.writeFileSync(
     path.join(manifestDir, 'install-manifest.json'),
     JSON.stringify(manifest, null, 2) + '\n'
@@ -413,6 +447,50 @@ function installForRuntime(runtime) {
       } catch(e) {}
     }
   }
+
+  // 6. Install Hooks & Custom Instructions for VS Code Copilot
+  if (runtime === 'copilot') {
+    const hooksDir = path.join(configDir, 'hooks');
+    const hooksPath = path.join(hooksDir, COPILOT_HOOK_FILENAME);
+    const searchHookScript = path.join(srcScripts, 'yongle-auto-search-hook.js').replace(/\\/g, '/');
+    const archiveHookScript = path.join(srcScripts, 'yongle-auto-archive-hook.js').replace(/\\/g, '/');
+
+    const copilotHooks = {
+      hooks: {
+        UserPromptSubmit: [
+          {
+            type: 'command',
+            command: `node "${searchHookScript}" --runtime=copilot`,
+            timeout: 10,
+          },
+        ],
+        PostToolUse: [
+          {
+            type: 'command',
+            command: `node "${searchHookScript}" --runtime=copilot`,
+            timeout: 10,
+          },
+        ],
+        Stop: [
+          {
+            type: 'command',
+            command: `node "${archiveHookScript}" --runtime=copilot`,
+            timeout: 10,
+          },
+        ],
+      },
+    };
+
+    fs.mkdirSync(hooksDir, { recursive: true });
+    fs.writeFileSync(hooksPath, JSON.stringify(copilotHooks, null, 2) + '\n', 'utf8');
+    console.log(`    ${green}✓${reset} VS Code Copilot hooks registered → ${dim}${hooksPath}${reset}`);
+
+    const instructionsDir = path.join(configDir, 'instructions');
+    const instructionsPath = path.join(instructionsDir, COPILOT_INSTRUCTIONS_FILENAME);
+    fs.mkdirSync(instructionsDir, { recursive: true });
+    fs.writeFileSync(instructionsPath, buildCopilotInstructions(), 'utf8');
+    console.log(`    ${green}✓${reset} VS Code Copilot instructions installed → ${dim}${instructionsPath}${reset}`);
+  }
 }
 
 function uninstallForRuntime(runtime) {
@@ -470,6 +548,25 @@ function uninstallForRuntime(runtime) {
           console.log(`    ${green}✓${reset} Antigravity PreInvocation hook unregistered`);
         }
       } catch(e) {}
+    }
+  }
+
+  // Remove Hooks & Custom Instructions for VS Code Copilot
+  if (runtime === 'copilot') {
+    const hooksDir = path.join(configDir, 'hooks');
+    const hooksPath = path.join(hooksDir, COPILOT_HOOK_FILENAME);
+    if (fs.existsSync(hooksPath)) {
+      fs.unlinkSync(hooksPath);
+      try { fs.rmdirSync(hooksDir); } catch {}
+      console.log(`    ${green}✓${reset} VS Code Copilot hooks removed`);
+    }
+
+    const instructionsDir = path.join(configDir, 'instructions');
+    const instructionsPath = path.join(instructionsDir, COPILOT_INSTRUCTIONS_FILENAME);
+    if (fs.existsSync(instructionsPath)) {
+      fs.unlinkSync(instructionsPath);
+      try { fs.rmdirSync(instructionsDir); } catch {}
+      console.log(`    ${green}✓${reset} VS Code Copilot instructions removed`);
     }
   }
 }

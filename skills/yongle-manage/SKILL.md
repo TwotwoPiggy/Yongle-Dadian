@@ -16,7 +16,7 @@ description: 运维总控台：状态看板、健康巡检、索引重建、云�
    ```bash
    node "{{YONGLE_INSTALL_DIR}}/scripts/yongle-status.js"
    ```
-2. **弹出交互式点选菜单**（使用 `ask_question` 工具），让用户直接点选下一步操作：
+2. **弹出交互式点选菜单**（若宿主支持交互提问工具如 `ask_question` / `vscode_askQuestions` 则调用，否则输出编号选项供用户直接回复），让用户直接点选下一步操作：
    - `(Recommended) 健康巡检与自愈 (Lint)`
    - `知识库云端同步 (Sync Knowledge)`
    - `重建 SQLite 索引 (Reindex)`
