@@ -446,6 +446,25 @@ function installForRuntime(runtime) {
         }
       } catch(e) {}
     }
+
+    // 5c. Sync Antigravity 2.0 plugin (~/.gemini/config/plugins/yongle-plugin) if present
+    if (hasGlobal) {
+      const ag2PluginDir = path.join(os.homedir(), '.gemini', 'config', 'plugins', 'yongle-plugin');
+      if (fs.existsSync(ag2PluginDir)) {
+        try {
+          const { installAntigravity2Plugin } = require(path.join(srcScripts, 'install-to-antigravity2.js'));
+          const pluginRes = installAntigravity2Plugin({
+            packageRoot,
+            pkg,
+            targetPluginDir: ag2PluginDir,
+            silent: true,
+          });
+          console.log(`    ${green}✓${reset} Antigravity 2.0 plugin synced (v${pluginRes.version}, ${pluginRes.installedSkillsCount} skills, ${pluginRes.installedAgentsCount} agents)`);
+        } catch (e) {
+          console.warn(`    ${yellow}⚠${reset} Failed to sync Antigravity 2.0 plugin: ${e.message}`);
+        }
+      }
+    }
   }
 
   // 6. Install Hooks & Custom Instructions for VS Code Copilot

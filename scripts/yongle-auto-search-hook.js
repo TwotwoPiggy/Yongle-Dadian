@@ -20,6 +20,31 @@ const READONLY_TOOL_PATTERN = /^(read|view|list|find|grep|glob|search|get_file|f
 
 const SELF_SCRIPT_PATTERN = /yongle-(hybrid-search|auto-search-hook|auto-archive-hook|bg-archiver|lint|status|db|dreamer|confirm)/i;
 
+const YONGLE_INJECTED_MARKER = 'Yongle Dadian 自动检索了知识库中的相关经验';
+
+const YONGLE_AUTO_SYSTEM_SKIP_PATTERNS = [
+  /Yongle Dadian 自动检索了知识库中的相关经验/,
+  /永乐大典\s*\(Yongle Dadian\)\s*自动检索到以下历史相关经验/,
+  /=== Hybrid Search Results:/,
+  /Reminder:\s*work efficiently/i,
+  /\[Notice\]\s*All your subagents and background tasks have been stopped/i,
+];
+
+const NON_ERROR_GENERIC_OUTPUT_PATTERNS = [
+  /(?:^|\n)Showing lines \d+-\d+ of \d+/m,
+  /(?:^|\n)Partial read \(lines \d+-\d+ of \d+\)/m,
+  /(?:^|\n)Showing binary file of type /m,
+  /(?:^|\n)Command exited with code 0\./m,
+  /(?:^|\n)Made \d+ replacements? in /m,
+  /(?:^|\n)Created file\./m,
+  /(?:^|\n)Tool is running as a background task with task id:/m,
+  /(?:^|\n)Created the following subagent:/m,
+  /(?:^|\n)The search for .* returned the following summary:/m,
+];
+
+const COMMAND_NONZERO_EXIT_PATTERN = /(?:^|\n)Command exited with code [1-9]\d*\./m;
+const STEP_EXECUTION_ERROR_PATTERN = /Encountered error in step execution:|encountered an error and has either stopped or failed to start execution/i;
+
 function getRuntimeArg(argv = process.argv) {
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
@@ -44,6 +69,48 @@ function stringifyValue(val) {
   } catch (e) {
     return String(val);
   }
+}
+
+/**
+ * 从 Antigravity USER_INPUT 原始文本中剥离 XML 包装与系统元数据标签，仅保留真实用户请求。
+ */
+function extractUserRequestText(rawContent) {
+  const text = String(rawContent || '');
+  if (!text.trim()) return '';
+
+  const userReqMatch = text.match(/<USER_REQUEST>\s*([\s\S]*?)\s*<\/USER_REQUEST>/i);
+  if (userReqMatch) {
+    return userReqMatch[1].trim();
+  }
+
+  return text
+    .replace(/<ADDITIONAL_METADATA>[\s\S]*?<\/ADDITIONAL_METADATA>/gi, '')
+    .replace(/<USER_SETTINGS_CHANGE>[\s\S]*?<\/USER_SETTINGS_CHANGE>/gi, '')
+    .replace(/<SYSTEM_MESSAGE>[\s\S]*?<\/SYSTEM_MESSAGE>/gi, '')
+    .trim();
+}
+
+/**
+ * 清理 Antigravity 工具/系统报错输出中的时间戳与外层包装，保留核心报错内容。
+ */
+function cleanAntigravityToolOutput(rawContent) {
+  return String(rawContent || '')
+    .replace(/^The following is a <SYSTEM_MESSAGE>[\s\S]*?<SYSTEM_MESSAGE>\s*/i, '')
+    .replace(/<\/SYSTEM_MESSAGE>\s*$/i, '')
+    .replace(/^(?:Created At|Completed At):\s*[^\r\n]*[\r\n]+/gm, '')
+    .trim();
+}
+
+function isYongleInjectedStep(step) {
+  if (!step || typeof step.content !== 'string') return false;
+  const upperType = String(step.type || '').toUpperCase();
+  if (upperType !== 'SYSTEM_MESSAGE' && upperType !== 'EPHEMERAL_MESSAGE' && upperType !== 'SYSTEM') {
+    return false;
+  }
+  return (
+    step.content.includes(YONGLE_INJECTED_MARKER) ||
+    step.content.includes('永乐大典 (Yongle Dadian) 自动检索到以下历史相关经验')
+  );
 }
 
 function resolveHybridSearchScript() {
@@ -79,28 +146,106 @@ function extractQueryFromAntigravityTranscript(transcriptPath) {
   }
 
   const transcript = fs.readFileSync(transcriptPath, 'utf8');
-  const lines = transcript.trim().split('\n');
+  const lines = transcript.trim().split('\n').filter(Boolean);
+  if (lines.length === 0) {
+    return { querySource: null, queryContext: '' };
+  }
 
-  for (let i = lines.length - 1; i >= Math.max(0, lines.length - 15); i--) {
+  const startIdx = Math.max(0, lines.length - 15);
+  for (let i = lines.length - 1; i >= startIdx; i--) {
+    let step;
     try {
-      const step = JSON.parse(lines[i]);
-      if (!step.content || typeof step.content !== 'string') continue;
+      step = JSON.parse(lines[i]);
+    } catch (e) {
+      continue;
+    }
+    if (!step || typeof step !== 'object') continue;
 
-      if (step.type === 'USER_INPUT') {
-        const lowerMsg = step.content.toLowerCase();
-        if (USER_PROMPT_KEYWORDS.some(kw => lowerMsg.includes(kw))) {
-          return { querySource: step.content, queryContext: 'USER_INPUT' };
-        }
+    const upperType = String(step.type || '').toUpperCase();
+
+    // 防重入：本阶段（最新 PLANNER_RESPONSE 之后）已注入过永乐大典检索结果时直接跳过
+    if (isYongleInjectedStep(step)) {
+      return { querySource: null, queryContext: 'ALREADY_INJECTED_SKIP' };
+    }
+
+    // 回合步骤边界：遇到模型已产出的 PLANNER_RESPONSE 时立即停止回溯，
+    // 防止同回合内后续每次模型调用重复命中同一条 USER_INPUT 或旧工具报错
+    if (upperType === 'PLANNER_RESPONSE') {
+      break;
+    }
+
+    if (upperType === 'USER_INPUT') {
+      const cleanUserText = extractUserRequestText(step.content);
+      if (!cleanUserText) {
         break;
       }
-
-      if (step.type === 'TOOL_RESPONSE' || step.type === 'SYSTEM' || step.type === 'tool_response' || step.type === 'RUN_COMMAND') {
-        const lowerContent = step.content.toLowerCase();
-        if (TOOL_ERROR_KEYWORDS.some(kw => lowerContent.includes(kw))) {
-          return { querySource: step.content, queryContext: 'TOOL_ERROR' };
-        }
+      if (/^\/yongle[-_a-z0-9]*/i.test(cleanUserText)) {
+        return { querySource: null, queryContext: 'YONGLE_CMD_SKIP' };
       }
-    } catch (e) {}
+      const lowerMsg = cleanUserText.toLowerCase();
+      if (USER_PROMPT_KEYWORDS.some(kw => lowerMsg.includes(kw))) {
+        return { querySource: cleanUserText, queryContext: 'USER_INPUT' };
+      }
+      break;
+    }
+
+    const isToolLikeStep = (
+      upperType === 'GENERIC' ||
+      upperType === 'TOOL_RESPONSE' ||
+      upperType === 'RUN_COMMAND' ||
+      upperType === 'SYSTEM' ||
+      upperType === 'SYSTEM_MESSAGE'
+    );
+    if (!isToolLikeStep) continue;
+
+    const rawContent = typeof step.content === 'string' ? step.content : '';
+    const rawError = typeof step.error === 'string' ? step.error : '';
+    const combinedRaw = [rawError, rawContent].filter(Boolean).join('\n');
+    if (!combinedRaw.trim()) continue;
+
+    // 跳过永乐自身脚本与系统通用提醒，防止自递归或噪音误报
+    if (
+      SELF_SCRIPT_PATTERN.test(combinedRaw) ||
+      YONGLE_AUTO_SYSTEM_SKIP_PATTERNS.some(re => re.test(combinedRaw))
+    ) {
+      continue;
+    }
+
+    const isExplicitErrorStatus = String(step.status || '').toUpperCase() === 'ERROR';
+
+    // 非显式 ERROR 状态下，过滤掉只读文件读取、退出码 0 命令、网页搜索摘要等常规成功输出
+    if (!isExplicitErrorStatus && NON_ERROR_GENERIC_OUTPUT_PATTERNS.some(re => re.test(rawContent))) {
+      continue;
+    }
+
+    // 对于 SYSTEM_MESSAGE，仅当明确为非 0 退出码或执行失败通知时才视为工具报错
+    if (upperType === 'SYSTEM_MESSAGE' && !isExplicitErrorStatus) {
+      const isRealSystemError = (
+        COMMAND_NONZERO_EXIT_PATTERN.test(rawContent) ||
+        STEP_EXECUTION_ERROR_PATTERN.test(rawContent)
+      );
+      if (!isRealSystemError) {
+        continue;
+      }
+    }
+
+    const mergedToolRaw = rawError && !rawContent.includes(rawError)
+      ? `${rawError}\n${rawContent}`
+      : (rawContent || rawError);
+    const cleanToolText = cleanAntigravityToolOutput(mergedToolRaw);
+    if (!cleanToolText) continue;
+
+    const lowerTool = cleanToolText.toLowerCase();
+    const hasErrorSignal = (
+      isExplicitErrorStatus ||
+      COMMAND_NONZERO_EXIT_PATTERN.test(rawContent) ||
+      STEP_EXECUTION_ERROR_PATTERN.test(rawContent) ||
+      TOOL_ERROR_KEYWORDS.some(kw => lowerTool.includes(kw))
+    );
+
+    if (hasErrorSignal) {
+      return { querySource: cleanToolText, queryContext: 'TOOL_ERROR' };
+    }
   }
 
   return { querySource: null, queryContext: '' };
@@ -293,7 +438,11 @@ if (require.main === module) {
 module.exports = {
   getRuntimeArg,
   normalizeCopilotEvent,
+  extractUserRequestText,
+  cleanAntigravityToolOutput,
+  isYongleInjectedStep,
   resolveHybridSearchScript,
+  extractQueryFromAntigravityTranscript,
   extractQueryFromCopilotPayload,
   buildCompactQuery,
   formatHookOutput,
